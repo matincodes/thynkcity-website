@@ -51,6 +51,12 @@ export function Navigation() {
             <Link href="/portfolio" className="text-foreground hover:text-primary transition-colors">
               Portfolio
             </Link>
+            <Link href="/gallery" className="text-foreground hover:text-primary transition-colors">
+              Gallery
+            </Link>
+            <Link href="/testimonials" className="text-foreground hover:text-primary transition-colors">
+              Testimonials
+            </Link>
             <Link href="/about" className="text-foreground hover:text-primary transition-colors">
               About Us
             </Link>
@@ -108,6 +114,20 @@ export function Navigation() {
                 onClick={() => setIsOpen(false)}
               >
                 Portfolio
+              </Link>
+              <Link
+                href="/gallery"
+                className="block px-3 py-2 text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Gallery
+              </Link>
+              <Link
+                href="/testimonials"
+                className="block px-3 py-2 text-foreground hover:text-primary transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                Testimonials
               </Link>
               <Link
                 href="/about"

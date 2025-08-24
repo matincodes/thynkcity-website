@@ -38,35 +38,83 @@ export default function ContactPage() {
     message: "",
     service: "",
   })
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle")
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle form submission here
-    console.log("Form submitted:", { userType, ...formData })
+    setIsSubmitting(true)
+    setSubmitStatus("idle")
+
+    try {
+      const emailData = {
+        to: "thynkcity@gmail.com",
+        subject: `New Contact Form Submission - ${userType || "General Inquiry"}`,
+        html: `
+          <h2>New Contact Form Submission</h2>
+          <p><strong>User Type:</strong> ${userType || "Not specified"}</p>
+          <p><strong>Name:</strong> ${formData.name}</p>
+          <p><strong>Email:</strong> ${formData.email}</p>
+          <p><strong>Phone:</strong> ${formData.phone || "Not provided"}</p>
+          ${formData.company ? `<p><strong>${userType === "business" ? "Company" : "School"}:</strong> ${formData.company}</p>` : ""}
+          ${formData.service ? `<p><strong>Service of Interest:</strong> ${formData.service}</p>` : ""}
+          <p><strong>Message:</strong></p>
+          <p>${formData.message.replace(/\n/g, "<br>")}</p>
+        `,
+      }
+
+      const response = await fetch("/api/send-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(emailData),
+      })
+
+      if (response.ok) {
+        setSubmitStatus("success")
+        setFormData({
+          name: "",
+          email: "",
+          phone: "",
+          company: "",
+          message: "",
+          service: "",
+        })
+        setUserType("")
+      } else {
+        setSubmitStatus("error")
+      }
+    } catch (error) {
+      console.error("Error sending email:", error)
+      setSubmitStatus("error")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const contactInfo = [
     {
       icon: Mail,
       title: "Email Us",
-      details: "info@thynkcity.com",
+      details: "build@thynkcity.com",
       description: "Send us an email and we'll respond within 24 hours",
     },
     {
       icon: Phone,
       title: "Call Us",
-      details: "+234 (0) 123 456 7890",
+      details: "+234 902 532 0287",
       description: "Speak directly with our team during business hours",
     },
     {
       icon: MapPin,
       title: "Visit Us",
-      details: "Lagos, Nigeria",
-      description: "123 Innovation Drive, Victoria Island, Lagos",
+      details: "10 Adeniji Street, Oregun",
+      description: "Ikeja, Lagos, Nigeria",
     },
     {
       icon: Clock,
@@ -88,11 +136,22 @@ export default function ContactPage() {
       case "individual":
         return [
           "Frontend Development Training",
+          "Backend Development Training",
           "Data Science Bootcamp",
           "Cybersecurity Course",
           "Mobile App Development",
           "UI/UX Design Training",
+          "3D Animation Course",
+          "DevOps Training",
+          "Cloud Computing Course",
+          "Project Management Training",
+          "Digital Marketing Course",
           "Kids Coding Program",
+          "AI using Teachable Machine (Kids)",
+          "App Inventor (Kids)",
+          "Game Development (Kids)",
+          "Creative Writing (Kids)",
+          "Mathematics (Kids)",
           "Other Training Program",
         ]
       case "business":
@@ -162,6 +221,22 @@ export default function ContactPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {submitStatus === "success" && (
+                    <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-green-800">
+                        Thank you! Your message has been sent successfully. We'll get back to you within 24 hours.
+                      </p>
+                    </div>
+                  )}
+                  {submitStatus === "error" && (
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-red-800">
+                        Sorry, there was an error sending your message. Please try again or contact us directly at
+                        build@thynkcity.com.
+                      </p>
+                    </div>
+                  )}
+
                   <form onSubmit={handleSubmit} className="space-y-6">
                     {/* User Type Selection */}
                     <div className="space-y-2">
@@ -270,9 +345,18 @@ export default function ContactPage() {
                       />
                     </div>
 
-                    <Button type="submit" size="lg" className="w-full">
-                      <Send className="mr-2 h-4 w-4" />
-                      Send Message
+                    <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                          Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="mr-2 h-4 w-4" />
+                          Send Message
+                        </>
+                      )}
                     </Button>
                   </form>
                 </CardContent>
@@ -322,18 +406,29 @@ export default function ContactPage() {
                 </CardContent>
               </Card>
 
-              {/* Map Placeholder */}
               <Card>
                 <CardHeader>
                   <CardTitle className="font-montserrat">Our Location</CardTitle>
+                  <CardDescription>Visit us at our office in Oregun, Lagos</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="w-full h-48 bg-muted rounded-lg flex items-center justify-center">
-                    <div className="text-center space-y-2">
-                      <MapPin className="h-8 w-8 text-primary mx-auto" />
-                      <p className="text-sm text-muted-foreground">Interactive Map</p>
-                      <p className="text-xs text-muted-foreground">Victoria Island, Lagos</p>
-                    </div>
+                  <div className="w-full h-64 rounded-lg overflow-hidden">
+                    <iframe
+                      src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3963.952912260219!2d3.378794315744!3d6.5276316950000005!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x103b8b2ae68280c1%3A0x4e5f306c2b4b8b0!2sAdeniji%20St%2C%20Oregun%2C%20Ikeja%20101233%2C%20Lagos!5e0!3m2!1sen!2sng!4v1640995200000!5m2!1sen!2sng"
+                      width="100%"
+                      height="100%"
+                      style={{ border: 0 }}
+                      allowFullScreen
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                      title="Thynkcity Office Location - 10 Adeniji Street, Oregun, Ikeja, Lagos"
+                    />
+                  </div>
+                  <div className="mt-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 inline mr-1" />
+                      10 Adeniji Street, Oregun, Ikeja, Lagos, Nigeria
+                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -342,7 +437,6 @@ export default function ContactPage() {
         </div>
       </section>
 
-      {/* FAQ Section */}
       <section className="py-20 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center space-y-4 mb-16">
@@ -361,8 +455,8 @@ export default function ContactPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-muted-foreground">
-                  Our programs range from 6 weeks for kids' courses to 20 weeks for advanced programs like AI. Most
-                  adult bootcamps are 12-16 weeks long.
+                  All our courses have a minimum duration of 24 weeks with classes held flexibly 2-3 times per week.
+                  Each course is one-on-one with a certified tutor provided by Thynkcity.
                 </p>
               </CardContent>
             </Card>

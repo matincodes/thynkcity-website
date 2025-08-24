@@ -6,6 +6,7 @@ import { Navigation } from "@/components/navigation"
 import { Footer } from "@/components/footer"
 import Link from "next/link"
 import Image from "next/image"
+import { createServerClient } from "@/lib/supabase/server"
 import {
   Code,
   Database,
@@ -20,99 +21,317 @@ import {
   Briefcase,
   Clock,
   Star,
+  Server,
+  Cable as Cube,
+  Settings,
+  Cloud,
+  Target,
+  Megaphone,
+  Gamepad2,
+  PenTool,
+  Calculator,
 } from "lucide-react"
 
-export default function TrainingPage() {
-  const adultCourses = [
-    {
-      icon: Code,
-      title: "Frontend Development",
-      duration: "12 weeks",
-      level: "Beginner to Advanced",
-      description:
-        "Master HTML, CSS, JavaScript, React, and modern frontend frameworks to build stunning web applications.",
-      skills: ["HTML/CSS", "JavaScript", "React", "TypeScript", "Tailwind CSS"],
-    },
-    {
-      icon: Database,
-      title: "Data Science & Analytics",
-      duration: "16 weeks",
-      level: "Intermediate",
-      description:
-        "Learn Python, machine learning, data visualization, and statistical analysis to become a data expert.",
-      skills: ["Python", "Pandas", "Machine Learning", "SQL", "Tableau"],
-    },
-    {
-      icon: Shield,
-      title: "Cybersecurity Fundamentals",
-      duration: "10 weeks",
-      level: "Beginner",
-      description:
-        "Understand network security, ethical hacking, and cybersecurity best practices to protect digital assets.",
-      skills: ["Network Security", "Ethical Hacking", "Risk Assessment", "Compliance"],
-    },
-    {
-      icon: Smartphone,
-      title: "Mobile App Development",
-      duration: "14 weeks",
-      level: "Intermediate",
-      description: "Build native and cross-platform mobile applications using React Native and Flutter.",
-      skills: ["React Native", "Flutter", "Mobile UI/UX", "App Store Deployment"],
-    },
-    {
-      icon: Palette,
-      title: "UI/UX Design",
-      duration: "8 weeks",
-      level: "Beginner",
-      description: "Create user-centered designs with Figma, Adobe XD, and design thinking methodologies.",
-      skills: ["Figma", "Design Thinking", "Prototyping", "User Research"],
-    },
-    {
-      icon: Bot,
-      title: "Artificial Intelligence",
-      duration: "20 weeks",
-      level: "Advanced",
-      description: "Dive deep into AI, machine learning, and neural networks to build intelligent systems.",
-      skills: ["Machine Learning", "Deep Learning", "TensorFlow", "Computer Vision"],
-    },
-  ]
+const iconMap: { [key: string]: any } = {
+  Code,
+  Database,
+  Shield,
+  Smartphone,
+  Bot,
+  Palette,
+  Server,
+  Cube,
+  Settings,
+  Cloud,
+  Target,
+  Megaphone,
+  Gamepad2,
+  PenTool,
+  Calculator,
+}
 
-  const kidsCourses = [
-    {
-      icon: Code,
-      title: "Scratch Programming",
-      age: "8-12 years",
-      duration: "6 weeks",
-      description: "Introduction to programming concepts through visual, block-based coding with Scratch.",
-    },
-    {
-      icon: Bot,
-      title: "Robotics for Kids",
-      age: "10-14 years",
-      duration: "8 weeks",
-      description: "Build and program robots using LEGO Mindstorms and Arduino platforms.",
-    },
-    {
-      icon: Code,
-      title: "Python for Kids",
-      age: "12-16 years",
-      duration: "10 weeks",
-      description: "Learn Python programming through games, animations, and fun projects.",
-    },
-    {
-      icon: Palette,
-      title: "Digital Art & Design",
-      age: "8-14 years",
-      duration: "6 weeks",
-      description: "Create digital artwork and learn basic design principles using kid-friendly tools.",
-    },
-  ]
+export default async function TrainingPage() {
+  const supabase = await createServerClient()
+  let adultCourses: any[] = []
+  let kidsCourses: any[] = []
+
+  try {
+    const { data: courses, error } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("status", "published")
+      .order("created_at", { ascending: true })
+
+    if (error) {
+      console.error("Error fetching courses:", error)
+    } else {
+      adultCourses = courses?.filter((course) => course.category === "adults") || []
+      kidsCourses = courses?.filter((course) => course.category === "kids") || []
+    }
+  } catch (error) {
+    console.error("Error fetching courses:", error)
+  }
+
+  if (adultCourses.length === 0) {
+    adultCourses = [
+      {
+        id: 1,
+        title: "Frontend Development",
+        duration: "24 weeks",
+        level: "Beginner to Advanced",
+        description:
+          "Master HTML, CSS, JavaScript, React, and modern frontend frameworks to build stunning web applications.",
+        skills: ["HTML/CSS", "JavaScript", "React", "TypeScript", "Tailwind CSS"],
+        slug: "frontend-development",
+        icon_name: "Code",
+        category: "adults",
+      },
+      {
+        id: 2,
+        title: "Backend Development",
+        duration: "28 weeks",
+        level: "Intermediate to Advanced",
+        description:
+          "Learn server-side programming with Node.js, Python, databases, and API development to build robust backend systems.",
+        skills: ["Node.js", "Python", "MongoDB", "PostgreSQL", "REST APIs"],
+        slug: "backend-development",
+        icon_name: "Server",
+        category: "adults",
+      },
+      {
+        id: 3,
+        title: "Data Science & Analytics",
+        duration: "32 weeks",
+        level: "Intermediate",
+        description:
+          "Learn Python, machine learning, data visualization, and statistical analysis to become a data expert.",
+        skills: ["Python", "Pandas", "Machine Learning", "SQL", "Tableau"],
+        slug: "data-science",
+        icon_name: "Database",
+        category: "adults",
+      },
+      {
+        id: 4,
+        title: "Cybersecurity Fundamentals",
+        duration: "26 weeks",
+        level: "Beginner",
+        description:
+          "Understand network security, ethical hacking, and cybersecurity best practices to protect digital assets.",
+        skills: ["Network Security", "Ethical Hacking", "Risk Assessment", "Compliance"],
+        slug: "cybersecurity",
+        icon_name: "Shield",
+        category: "adults",
+      },
+      {
+        id: 5,
+        title: "Mobile App Development",
+        duration: "30 weeks",
+        level: "Intermediate",
+        description: "Build native and cross-platform mobile applications using React Native and Flutter.",
+        skills: ["React Native", "Flutter", "Mobile UI/UX", "App Store Deployment"],
+        slug: "mobile-development",
+        icon_name: "Smartphone",
+        category: "adults",
+      },
+      {
+        id: 6,
+        title: "UI/UX Design",
+        duration: "24 weeks",
+        level: "Beginner",
+        description: "Create user-centered designs with Figma, Adobe XD, and design thinking methodologies.",
+        skills: ["Figma", "Design Thinking", "Prototyping", "User Research"],
+        slug: "ui-ux-design",
+        icon_name: "Palette",
+        category: "adults",
+      },
+      {
+        id: 7,
+        title: "3D Animation",
+        duration: "36 weeks",
+        level: "Beginner to Advanced",
+        description: "Master 3D modeling, animation, and rendering using Blender, Maya, and industry-standard tools.",
+        skills: ["Blender", "Maya", "3D Modeling", "Animation", "Rendering"],
+        slug: "3d-animation",
+        icon_name: "Cube",
+        category: "adults",
+      },
+      {
+        id: 8,
+        title: "DevOps Engineering",
+        duration: "28 weeks",
+        level: "Intermediate to Advanced",
+        description:
+          "Learn CI/CD, containerization, cloud deployment, and infrastructure automation for modern development.",
+        skills: ["Docker", "Kubernetes", "AWS", "Jenkins", "Terraform"],
+        slug: "devops",
+        icon_name: "Settings",
+        category: "adults",
+      },
+      {
+        id: 9,
+        title: "Cloud Computing",
+        duration: "26 weeks",
+        level: "Intermediate",
+        description: "Master cloud platforms like AWS, Azure, and Google Cloud for scalable application deployment.",
+        skills: ["AWS", "Azure", "Google Cloud", "Serverless", "Cloud Architecture"],
+        slug: "cloud-computing",
+        icon_name: "Cloud",
+        category: "adults",
+      },
+      {
+        id: 10,
+        title: "Project Management",
+        duration: "24 weeks",
+        level: "Beginner to Intermediate",
+        description: "Learn Agile, Scrum, and project management methodologies to lead successful tech projects.",
+        skills: ["Agile", "Scrum", "Jira", "Risk Management", "Team Leadership"],
+        slug: "project-management",
+        icon_name: "Target",
+        category: "adults",
+      },
+      {
+        id: 11,
+        title: "Digital Marketing",
+        duration: "24 weeks",
+        level: "Beginner to Intermediate",
+        description:
+          "Master SEO, social media marketing, content strategy, and digital advertising for business growth.",
+        skills: ["SEO", "Social Media", "Google Ads", "Content Marketing", "Analytics"],
+        slug: "digital-marketing",
+        icon_name: "Megaphone",
+        category: "adults",
+      },
+      {
+        id: 12,
+        title: "Artificial Intelligence",
+        duration: "40 weeks",
+        level: "Advanced",
+        description: "Dive deep into AI, machine learning, and neural networks to build intelligent systems.",
+        skills: ["Machine Learning", "Deep Learning", "TensorFlow", "Computer Vision"],
+        slug: "artificial-intelligence",
+        icon_name: "Bot",
+        category: "adults",
+      },
+    ]
+  }
+
+  if (kidsCourses.length === 0) {
+    kidsCourses = [
+      {
+        id: 1,
+        title: "Scratch Programming",
+        age_range: "8-12 years",
+        duration: "24 weeks",
+        description: "Introduction to programming concepts through visual, block-based coding with Scratch.",
+        slug: "scratch-programming",
+        icon_name: "Code",
+        category: "kids",
+      },
+      {
+        id: 2,
+        title: "Robotics for Kids",
+        age_range: "10-14 years",
+        duration: "28 weeks",
+        description: "Build and program robots using LEGO Mindstorms and Arduino platforms.",
+        slug: "robotics-kids",
+        icon_name: "Bot",
+        category: "kids",
+      },
+      {
+        id: 3,
+        title: "Python for Kids",
+        age_range: "12-16 years",
+        duration: "30 weeks",
+        description: "Learn Python programming through games, animations, and fun projects.",
+        slug: "python-kids",
+        icon_name: "Code",
+        category: "kids",
+      },
+      {
+        id: 4,
+        title: "AI using Teachable Machine",
+        age_range: "10-14 years",
+        duration: "24 weeks",
+        description:
+          "Explore artificial intelligence concepts using Google's Teachable Machine and create smart projects.",
+        slug: "ai-teachable-machine",
+        icon_name: "Bot",
+        category: "kids",
+      },
+      {
+        id: 5,
+        title: "App Inventor",
+        age_range: "12-16 years",
+        duration: "26 weeks",
+        description: "Build mobile apps without complex coding using MIT's App Inventor visual programming platform.",
+        slug: "app-inventor",
+        icon_name: "Smartphone",
+        category: "kids",
+      },
+      {
+        id: 6,
+        title: "3D Animation for Kids",
+        age_range: "10-16 years",
+        duration: "28 weeks",
+        description: "Create 3D characters and animations using kid-friendly tools like Blender and Tinkercad.",
+        slug: "3d-animation-kids",
+        icon_name: "Cube",
+        category: "kids",
+      },
+      {
+        id: 7,
+        title: "Game Development",
+        age_range: "12-16 years",
+        duration: "30 weeks",
+        description: "Design and build your own video games using Scratch, Unity, and game design principles.",
+        slug: "game-development-kids",
+        icon_name: "Gamepad2",
+        category: "kids",
+      },
+      {
+        id: 8,
+        title: "Creative Writing",
+        age_range: "8-14 years",
+        duration: "24 weeks",
+        description: "Develop storytelling skills, creative writing techniques, and digital publishing abilities.",
+        slug: "creative-writing-kids",
+        icon_name: "PenTool",
+        category: "kids",
+      },
+      {
+        id: 9,
+        title: "Mathematics",
+        age_range: "8-16 years",
+        duration: "32 weeks",
+        description: "Build strong mathematical foundations with interactive learning and problem-solving techniques.",
+        slug: "mathematics-kids",
+        icon_name: "Calculator",
+        category: "kids",
+      },
+      {
+        id: 10,
+        title: "Digital Art & Design",
+        age_range: "8-14 years",
+        duration: "24 weeks",
+        description: "Create digital artwork and learn basic design principles using kid-friendly tools.",
+        slug: "digital-art-kids",
+        icon_name: "Palette",
+        category: "kids",
+      },
+    ]
+  }
 
   const benefits = [
     {
       icon: Users,
-      title: "Expert Instructors",
-      description: "Learn from industry professionals with real-world experience and proven track records.",
+      title: "One-on-One Tutoring",
+      description: "Each course features personalized one-on-one sessions with certified tutors provided by Thynkcity.",
+    },
+    {
+      icon: Clock,
+      title: "Flexible Scheduling",
+      description:
+        "Classes held 2-3 times per week with flexible timing to fit your schedule. Minimum 24 weeks duration.",
     },
     {
       icon: BookOpen,
@@ -123,11 +342,6 @@ export default function TrainingPage() {
       icon: Briefcase,
       title: "Career Support",
       description: "Get job placement assistance, resume reviews, and interview preparation support.",
-    },
-    {
-      icon: Users,
-      title: "Community Access",
-      description: "Join a vibrant community of learners, mentors, and industry professionals.",
     },
   ]
 
@@ -148,8 +362,9 @@ export default function TrainingPage() {
                   Master the Skills of Tomorrow. <span className="text-primary">Start Your Tech Journey</span> Today.
                 </h1>
                 <p className="text-xl text-muted-foreground leading-relaxed">
-                  Unlock your potential with our comprehensive training programs designed for all ages. From coding to
-                  robotics, we prepare you for the future of work with hands-on, practical learning.
+                  Unlock your potential with our comprehensive one-on-one training programs designed for all ages. Each
+                  course features personalized tutoring with certified instructors, flexible 2-3 times per week
+                  scheduling, and a minimum 24-week duration for thorough skill development.
                 </p>
               </div>
 
@@ -196,7 +411,7 @@ export default function TrainingPage() {
             </h2>
             <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               Whether you're starting your career, switching fields, or introducing your child to technology, we have
-              the perfect program for you.
+              the perfect program for you. All courses feature one-on-one tutoring with certified instructors.
             </p>
           </div>
 
@@ -212,75 +427,90 @@ export default function TrainingPage() {
 
             <TabsContent value="adults" className="space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {adultCourses.map((course, index) => (
-                  <Card
-                    key={index}
-                    className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20"
-                  >
-                    <CardHeader>
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-4">
-                        <course.icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <CardTitle className="font-montserrat">{course.title}</CardTitle>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <Clock className="h-4 w-4" />
-                          <span>{course.duration}</span>
+                {adultCourses.map((course, index) => {
+                  const IconComponent = iconMap[course.icon_name] || Code
+                  const skills = course.skills || course.curriculum?.split(",") || []
+
+                  return (
+                    <Card
+                      key={course.id || index}
+                      className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20"
+                    >
+                      <CardHeader>
+                        <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-4">
+                          <IconComponent className="h-6 w-6 text-primary" />
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <Star className="h-4 w-4" />
-                          <span>{course.level}</span>
+                        <CardTitle className="font-montserrat">{course.title}</CardTitle>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <Clock className="h-4 w-4" />
+                            <span>{course.duration}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-4 w-4" />
+                            <span>{course.level || "All Levels"}</span>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-muted-foreground">{course.description}</p>
-                      <div className="space-y-2">
-                        <p className="text-sm font-semibold">Key Skills:</p>
-                        <div className="flex flex-wrap gap-2">
-                          {course.skills.map((skill, skillIndex) => (
-                            <Badge key={skillIndex} variant="secondary" className="text-xs">
-                              {skill}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <Button className="w-full group-hover:bg-primary/90 transition-colors">
-                        Learn More
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-muted-foreground">{course.description}</p>
+                        {skills.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-sm font-semibold">Key Skills:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {skills.slice(0, 5).map((skill: string, skillIndex: number) => (
+                                <Badge key={skillIndex} variant="secondary" className="text-xs">
+                                  {skill.trim()}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <Button asChild className="w-full group-hover:bg-primary/90 transition-colors">
+                          <Link href={`/courses/${course.slug}`}>
+                            Learn More
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             </TabsContent>
 
             <TabsContent value="kids" className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {kidsCourses.map((course, index) => (
-                  <Card
-                    key={index}
-                    className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 bg-gradient-to-br from-background to-muted/30"
-                  >
-                    <CardHeader>
-                      <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-4">
-                        <course.icon className="h-6 w-6 text-primary" />
-                      </div>
-                      <CardTitle className="font-montserrat text-lg">{course.title}</CardTitle>
-                      <div className="flex flex-col space-y-1 text-sm text-muted-foreground">
-                        <span>Ages: {course.age}</span>
-                        <span>Duration: {course.duration}</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <p className="text-muted-foreground text-sm">{course.description}</p>
-                      <Button size="sm" className="w-full group-hover:bg-primary/90 transition-colors">
-                        Enroll Child
-                        <ArrowRight className="ml-2 h-3 w-3" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                {kidsCourses.map((course, index) => {
+                  const IconComponent = iconMap[course.icon_name] || Code
+
+                  return (
+                    <Card
+                      key={course.id || index}
+                      className="group hover:shadow-lg transition-all duration-300 border-2 hover:border-primary/20 bg-gradient-to-br from-background to-muted/30"
+                    >
+                      <CardHeader>
+                        <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center group-hover:bg-primary/20 transition-colors mb-4">
+                          <IconComponent className="h-6 w-6 text-primary" />
+                        </div>
+                        <CardTitle className="font-montserrat text-lg">{course.title}</CardTitle>
+                        <div className="flex flex-col space-y-1 text-sm text-muted-foreground">
+                          <span>Ages: {course.age_range || course.age}</span>
+                          <span>Duration: {course.duration}</span>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <p className="text-muted-foreground text-sm">{course.description}</p>
+                        <Button size="sm" asChild className="w-full group-hover:bg-primary/90 transition-colors">
+                          <Link href={`/courses/${course.slug}`}>
+                            Learn More
+                            <ArrowRight className="ml-2 h-3 w-3" />
+                          </Link>
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
               </div>
             </TabsContent>
           </Tabs>

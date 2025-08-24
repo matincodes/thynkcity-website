@@ -37,28 +37,28 @@ export default function AboutPage() {
 
   const teamMembers = [
     {
-      name: "Dr. Adebayo Ogundimu",
+      name: "Abdulmatin Adeniji",
       role: "Founder & CEO",
-      bio: "Visionary leader with 15+ years in EdTech and FinTech. Former Microsoft executive passionate about African innovation.",
-      image: "/placeholder.svg?height=300&width=300&text=Dr.+Adebayo+Ogundimu+CEO",
+      bio: "Visionary entrepreneur and tech leader passionate about transforming African education. With extensive experience in EdTech and a deep commitment to empowering the next generation of African innovators.",
+      image: "/team/abdulmatin-adeniji.jpg",
     },
     {
       name: "Sarah Ikechukwu",
       role: "Chief Technology Officer",
       bio: "Full-stack engineer and AI specialist. Led development teams at top tech companies before joining Thynkcity's mission.",
-      image: "/placeholder.svg?height=300&width=300&text=Sarah+Ikechukwu+CTO",
+      image: "/team/sarah-ikechukwu.jpg",
     },
     {
       name: "Michael Adeyemi",
       role: "Head of Education",
       bio: "Former university professor and curriculum designer with expertise in STEM education and youth development programs.",
-      image: "/placeholder.svg?height=300&width=300&text=Michael+Adeyemi+Head+of+Education",
+      image: "/team/michael-adeyemi.jpg",
     },
     {
       name: "Fatima Al-Hassan",
       role: "Head of Business Development",
       bio: "Strategic partnerships expert with deep knowledge of African markets and extensive network across the continent.",
-      image: "/placeholder.svg?height=300&width=300&text=Fatima+Al-Hassan+Business+Development",
+      image: "/team/fatima-al-hassan.jpg",
     },
   ]
 
@@ -66,7 +66,8 @@ export default function AboutPage() {
     {
       year: "2020",
       title: "Foundation",
-      description: "Thynkcity was founded with a vision to bridge the digital skills gap in Africa.",
+      description:
+        "Thynkcity was founded by Abdulmatin Adeniji with a vision to bridge the digital skills gap in Africa.",
     },
     {
       year: "2021",
@@ -198,23 +199,23 @@ export default function AboutPage() {
 
               <div className="space-y-6">
                 <p className="text-muted-foreground leading-relaxed">
-                  In 2020, our founder Dr. Adebayo Ogundimu, after years of working with global tech companies, returned
-                  to Nigeria with a mission. He witnessed firsthand how African professionals excelled when given the
-                  right opportunities, yet millions of talented individuals remained untapped due to limited access to
-                  quality education and technology resources.
+                  In 2020, our founder Abdulmatin Adeniji, driven by a passion for education and technology, established
+                  Thynkcity with a clear mission. Having witnessed firsthand the incredible potential of African talent
+                  and the barriers they face in accessing quality education, he set out to create a platform that would
+                  bridge this gap and unlock opportunities for millions across the continent.
                 </p>
 
                 <p className="text-muted-foreground leading-relaxed">
-                  What started as a small coding bootcamp in Lagos has evolved into a comprehensive ecosystem that
-                  addresses every aspect of personal and professional development. We've trained thousands of students,
-                  helped hundreds of businesses transform digitally, and partnered with schools across the continent to
-                  modernize education.
+                  What started as a vision to democratize access to technology education has evolved into a
+                  comprehensive ecosystem that addresses every aspect of personal and professional development. Under
+                  Abdulmatin's leadership, we've trained thousands of students, helped hundreds of businesses transform
+                  digitally, and partnered with schools across the continent to modernize education.
                 </p>
 
                 <p className="text-muted-foreground leading-relaxed">
                   Today, Thynkcity stands as a testament to what's possible when African innovation meets global
                   standards. We're not just building a company; we're building the foundation for Africa's digital
-                  future.
+                  future, one student, one business, and one community at a time.
                 </p>
               </div>
             </div>
