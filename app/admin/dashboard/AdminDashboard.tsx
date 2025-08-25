@@ -21,6 +21,9 @@ import {
   Plus,
   Loader2,
   Users,
+  Building2,
+  DollarSign,
+  FileText,
 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import type { Testimonial, BlogPost, GalleryImage, PortfolioItem, Course } from "@/lib/supabase/queries"
@@ -50,15 +53,55 @@ interface Registration {
   created_at: string
 }
 
+interface Franchisee {
+  id: string
+  business_name: string
+  owner_name: string
+  email: string
+  phone: string
+  location: string
+  status: "pending" | "approved" | "rejected" | "suspended"
+  created_at: string
+  approved_at?: string
+  total_schools: number
+  active_proposals: number
+  monthly_revenue: number
+}
+
+interface DiscountRequest {
+  id: string
+  franchisee_id: string
+  franchisee_name: string
+  school_name: string
+  original_amount: number
+  requested_discount: number
+  reason: string
+  status: "pending" | "approved" | "rejected"
+  created_at: string
+}
+
+interface FranchiseActivity {
+  id: string
+  franchisee_id: string
+  franchisee_name: string
+  activity_type: string
+  description: string
+  created_at: string
+}
+
 export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
+  const [loading, setLoading] = useState(true)
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([])
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [courses, setCourses] = useState<Course[]>([])
-  const [registrations, setRegistrations] = useState<Registration[]>([]) // Added registrations state
-  const [loading, setLoading] = useState(true)
+  const [registrations, setRegistrations] = useState<Registration[]>([])
+  const [franchisees, setFranchisees] = useState<Franchisee[]>([])
+  const [discountRequests, setDiscountRequests] = useState<DiscountRequest[]>([])
+  const [franchiseActivities, setFranchiseActivities] = useState<FranchiseActivity[]>([])
+
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<{ type: string; id: string } | null>(null)
@@ -70,20 +113,26 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     totalGalleryImages: 0,
     totalPortfolioItems: 0,
     totalCourses: 0,
-    totalRegistrations: 0, // Added registration stats
+    totalRegistrations: 0,
     pendingRegistrations: 0,
+    totalFranchisees: 0,
+    pendingFranchisees: 0,
+    activeFranchisees: 0,
+    pendingDiscountRequests: 0,
+    totalRevenue: 0,
   })
 
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    fetchAllData()
+    fetchData()
   }, [])
 
-  const fetchAllData = async () => {
-    setLoading(true)
+  const fetchData = async () => {
     try {
+      setLoading(true)
+
       // Fetch testimonials
       const { data: testimonialsData } = await supabase
         .from("testimonials")
@@ -116,12 +165,73 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         .select("*")
         .order("created_at", { ascending: false })
 
+      const [
+        testimonialsRes,
+        blogPostsRes,
+        galleryRes,
+        portfolioRes,
+        coursesRes,
+        registrationsRes,
+        franchiseesRes,
+        discountRequestsRes,
+        activitiesRes,
+      ] = await Promise.all([
+        supabase.from("testimonials").select("*").order("created_at", { ascending: false }),
+        supabase.from("blog_posts").select("*").order("created_at", { ascending: false }),
+        supabase.from("gallery_images").select("*").order("created_at", { ascending: false }),
+        supabase.from("portfolio_items").select("*").order("created_at", { ascending: false }),
+        supabase.from("courses").select("*").order("created_at", { ascending: false }),
+        supabase.from("registrations").select("*").order("created_at", { ascending: false }),
+        supabase
+          .from("franchisees")
+          .select(`
+          *,
+          schools:schools(count),
+          proposals:proposals(count),
+          discount_requests:discount_requests(count)
+        `)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("discount_requests")
+          .select(`
+          *,
+          franchisee:franchisees(business_name)
+        `)
+          .order("created_at", { ascending: false }),
+        supabase
+          .from("franchise_activities")
+          .select(`
+          *,
+          franchisee:franchisees(business_name)
+        `)
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ])
+
       setTestimonials(testimonialsData || [])
       setBlogPosts(blogPostsData || [])
       setGalleryImages(galleryData || [])
       setPortfolioItems(portfolioData || [])
       setCourses(coursesData || [])
       setRegistrations(registrationsData || []) // Set registrations data
+      if (testimonialsRes.data) setTestimonials(testimonialsRes.data)
+      if (blogPostsRes.data) setBlogPosts(blogPostsRes.data)
+      if (galleryRes.data) setGalleryImages(galleryRes.data)
+      if (portfolioRes.data) setPortfolioItems(portfolioRes.data)
+      if (coursesRes.data) setCourses(coursesRes.data)
+      if (registrationsRes.data) setRegistrations(registrationsRes.data)
+      if (franchiseesRes.data) setFranchisees(franchiseesRes.data)
+      if (discountRequestsRes.data) setDiscountRequests(discountRequestsRes.data)
+      if (activitiesRes.data) setFranchiseActivities(activitiesRes.data)
+
+      // Calculate stats
+      const pendingTestimonials = testimonialsRes.data?.filter((t) => t.status === "pending").length || 0
+      const publishedBlogPosts = blogPostsRes.data?.filter((b) => b.status === "published").length || 0
+      const pendingRegistrations = registrationsRes.data?.filter((r) => r.status === "pending").length || 0
+      const pendingFranchisees = franchiseesRes.data?.filter((f) => f.status === "pending").length || 0
+      const activeFranchisees = franchiseesRes.data?.filter((f) => f.status === "approved").length || 0
+      const pendingDiscountRequests = discountRequestsRes.data?.filter((d) => d.status === "pending").length || 0
+      const totalRevenue = franchiseesRes.data?.reduce((sum, f) => sum + (f.monthly_revenue || 0), 0) || 0
 
       // Calculate stats
       setStats({
@@ -134,11 +244,61 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         totalCourses: coursesData?.length || 0,
         totalRegistrations: registrationsData?.length || 0, // Added registration stats
         pendingRegistrations: registrationsData?.filter((r) => r.status === "pending").length || 0,
+        totalFranchisees: franchiseesRes.data?.length || 0,
+        pendingFranchisees,
+        activeFranchisees,
+        pendingDiscountRequests,
+        totalRevenue,
       })
     } catch (error) {
       console.error("Error fetching data:", error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleFranchiseeAction = async (franchiseeId: string, action: "approve" | "reject" | "suspend") => {
+    try {
+      const status = action === "approve" ? "approved" : action === "reject" ? "rejected" : "suspended"
+      const updateData: any = { status }
+
+      if (action === "approve") {
+        updateData.approved_at = new Date().toISOString()
+      }
+
+      const { error } = await supabase.from("franchisees").update(updateData).eq("id", franchiseeId)
+
+      if (error) throw error
+
+      // Log activity
+      await supabase.from("franchise_activities").insert({
+        franchisee_id: franchiseeId,
+        activity_type: "status_change",
+        description: `Franchisee ${action}d by admin`,
+        admin_id: user.id,
+      })
+
+      fetchData()
+    } catch (error) {
+      console.error(`Error ${action}ing franchisee:`, error)
+    }
+  }
+
+  const handleDiscountRequest = async (requestId: string, action: "approve" | "reject") => {
+    try {
+      const { error } = await supabase
+        .from("discount_requests")
+        .update({
+          status: action === "approve" ? "approved" : "rejected",
+          reviewed_by: user.id,
+          reviewed_at: new Date().toISOString(),
+        })
+        .eq("id", requestId)
+
+      if (error) throw error
+      fetchData()
+    } catch (error) {
+      console.error(`Error ${action}ing discount request:`, error)
     }
   }
 
@@ -206,7 +366,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       }
 
       setDeleteConfirm(null)
-      await fetchAllData() // Refresh stats
+      await fetchData() // Refresh stats
     } catch (error) {
       console.error(`Error deleting ${type}:`, error)
     }
@@ -230,7 +390,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       if (error) throw error
 
       setRegistrations((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
-      await fetchAllData() // Refresh stats
+      await fetchData() // Refresh stats
     } catch (error) {
       console.error("Error updating registration:", error)
     }
@@ -278,6 +438,42 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               <BarChart3 className="h-4 w-4 mr-2" />
               Overview
             </Button>
+
+            <Button
+              variant={activeTab === "franchisees" ? "default" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("franchisees")}
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Franchisees
+              {stats.pendingFranchisees > 0 && (
+                <Badge variant="destructive" className="ml-auto">
+                  {stats.pendingFranchisees}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeTab === "discount-requests" ? "default" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("discount-requests")}
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Discount Requests
+              {stats.pendingDiscountRequests > 0 && (
+                <Badge variant="destructive" className="ml-auto">
+                  {stats.pendingDiscountRequests}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant={activeTab === "franchise-activities" ? "default" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("franchise-activities")}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Franchise Activities
+            </Button>
+
             <Button
               variant={activeTab === "testimonials" ? "default" : "ghost"}
               className="w-full justify-start"
@@ -291,6 +487,8 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 </Badge>
               )}
             </Button>
+
+            {/* ... existing navigation items ... */}
             <Button
               variant={activeTab === "blog" ? "default" : "ghost"}
               className="w-full justify-start"
@@ -351,6 +549,42 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card className="hover-lift smooth-transition">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Franchisees</CardTitle>
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalFranchisees}</div>
+                    <p className="text-xs text-muted-foreground">
+                      {stats.activeFranchisees} active, {stats.pendingFranchisees} pending
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover-lift smooth-transition">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
+                    <p className="text-xs text-muted-foreground">From all franchisees</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover-lift smooth-transition">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Discount Requests</CardTitle>
+                    <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.pendingDiscountRequests}</div>
+                    <p className="text-xs text-muted-foreground">Pending approval</p>
+                  </CardContent>
+                </Card>
+
+                {/* ... existing overview cards ... */}
+                <Card className="hover-lift smooth-transition">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-sm font-medium">Total Testimonials</CardTitle>
                     <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
@@ -373,12 +607,12 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
                 <Card className="hover-lift smooth-transition">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Gallery Images</CardTitle>
-                    <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    <CardTitle className="text-sm font-medium">Registrations</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalGalleryImages}</div>
-                    <p className="text-xs text-muted-foreground">Active images</p>
+                    <div className="text-2xl font-bold">{stats.totalRegistrations}</div>
+                    <p className="text-xs text-muted-foreground">{stats.pendingRegistrations} pending review</p>
                   </CardContent>
                 </Card>
 
@@ -392,18 +626,210 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                     <p className="text-xs text-muted-foreground">Available courses</p>
                   </CardContent>
                 </Card>
-
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Registrations</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalRegistrations}</div>
-                    <p className="text-xs text-muted-foreground">{stats.pendingRegistrations} pending review</p>
-                  </CardContent>
-                </Card>
               </div>
+            </div>
+          )}
+
+          {activeTab === "franchisees" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold font-montserrat mb-2">Franchisee Management</h2>
+                  <p className="text-muted-foreground">Manage franchise applications and active franchisees</p>
+                </div>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Franchisees</CardTitle>
+                  <CardDescription>Review and manage franchise applications and active franchisees</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Business Name</TableHead>
+                        <TableHead>Owner</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Schools</TableHead>
+                        <TableHead>Revenue</TableHead>
+                        <TableHead>Applied</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {franchisees.map((franchisee) => (
+                        <TableRow key={franchisee.id}>
+                          <TableCell className="font-medium">{franchisee.business_name}</TableCell>
+                          <TableCell>{franchisee.owner_name}</TableCell>
+                          <TableCell>{franchisee.location}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                franchisee.status === "approved"
+                                  ? "default"
+                                  : franchisee.status === "pending"
+                                    ? "secondary"
+                                    : franchisee.status === "rejected"
+                                      ? "destructive"
+                                      : "outline"
+                              }
+                            >
+                              {franchisee.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{franchisee.total_schools || 0}</TableCell>
+                          <TableCell>₦{(franchisee.monthly_revenue || 0).toLocaleString()}</TableCell>
+                          <TableCell>{new Date(franchisee.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              {franchisee.status === "pending" && (
+                                <>
+                                  <Button size="sm" onClick={() => handleFranchiseeAction(franchisee.id, "approve")}>
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleFranchiseeAction(franchisee.id, "reject")}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+                              {franchisee.status === "approved" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleFranchiseeAction(franchisee.id, "suspend")}
+                                >
+                                  Suspend
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "discount-requests" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold font-montserrat mb-2">Discount Requests</h2>
+                <p className="text-muted-foreground">Review and approve discount requests from franchisees</p>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pending Discount Requests</CardTitle>
+                  <CardDescription>Review discount requests that need approval</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Franchisee</TableHead>
+                        <TableHead>School</TableHead>
+                        <TableHead>Original Amount</TableHead>
+                        <TableHead>Requested Discount</TableHead>
+                        <TableHead>Final Amount</TableHead>
+                        <TableHead>Reason</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {discountRequests.map((request) => (
+                        <TableRow key={request.id}>
+                          <TableCell className="font-medium">{request.franchisee_name}</TableCell>
+                          <TableCell>{request.school_name}</TableCell>
+                          <TableCell>₦{request.original_amount.toLocaleString()}</TableCell>
+                          <TableCell>{request.requested_discount}%</TableCell>
+                          <TableCell>
+                            ₦{(request.original_amount * (1 - request.requested_discount / 100)).toLocaleString()}
+                          </TableCell>
+                          <TableCell className="max-w-xs truncate">{request.reason}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                request.status === "approved"
+                                  ? "default"
+                                  : request.status === "pending"
+                                    ? "secondary"
+                                    : "destructive"
+                              }
+                            >
+                              {request.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {request.status === "pending" && (
+                              <div className="flex gap-2">
+                                <Button size="sm" onClick={() => handleDiscountRequest(request.id, "approve")}>
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDiscountRequest(request.id, "reject")}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "franchise-activities" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold font-montserrat mb-2">Franchise Activities</h2>
+                <p className="text-muted-foreground">Monitor all franchise activities and system events</p>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Activities</CardTitle>
+                  <CardDescription>Latest activities from all franchisees</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Franchisee</TableHead>
+                        <TableHead>Activity Type</TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead>Date</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {franchiseActivities.map((activity) => (
+                        <TableRow key={activity.id}>
+                          <TableCell className="font-medium">{activity.franchisee_name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{activity.activity_type.replace("_", " ")}</Badge>
+                          </TableCell>
+                          <TableCell>{activity.description}</TableCell>
+                          <TableCell>{new Date(activity.created_at).toLocaleString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </div>
           )}
 
@@ -995,7 +1421,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 setShowAddModal(false)
                 setEditingItem(null)
               }}
-              onSave={fetchAllData}
+              onSave={fetchData}
             />
           )}
           {editingItem.type === "course" && (
@@ -1005,7 +1431,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 setShowAddModal(false)
                 setEditingItem(null)
               }}
-              onSave={fetchAllData}
+              onSave={fetchData}
             />
           )}
           {editingItem.type === "portfolio" && (
@@ -1015,7 +1441,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 setShowAddModal(false)
                 setEditingItem(null)
               }}
-              onSave={fetchAllData}
+              onSave={fetchData}
             />
           )}
           {editingItem.type === "gallery" && (
@@ -1025,7 +1451,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                 setShowAddModal(false)
                 setEditingItem(null)
               }}
-              onSave={fetchAllData}
+              onSave={fetchData}
             />
           )}
         </>
