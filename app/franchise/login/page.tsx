@@ -79,15 +79,26 @@ export default function FranchiseLoginPage() {
     setMessage("")
 
     try {
-      // Create auth user
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
+        options: {
+          emailRedirectTo:
+            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/franchise/dashboard`,
+        },
       })
 
       if (error) throw error
 
       if (data.user) {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+
+        const { data: authUser, error: authError } = await supabase.auth.getUser()
+
+        if (authError || !authUser.user) {
+          throw new Error("Failed to create user account. Please try again.")
+        }
+
         // Create franchisee profile
         const { error: profileError } = await supabase.from("franchisee_profiles").insert({
           user_id: data.user.id,
@@ -101,7 +112,12 @@ export default function FranchiseLoginPage() {
           status: "pending",
         })
 
-        if (profileError) throw profileError
+        if (profileError) {
+          if (profileError.message.includes("foreign key constraint")) {
+            throw new Error("Account creation failed. Please try again or contact support.")
+          }
+          throw profileError
+        }
 
         setMessage("Application submitted successfully! Please wait for admin approval.")
         setFormData({
@@ -116,7 +132,8 @@ export default function FranchiseLoginPage() {
         })
       }
     } catch (error: any) {
-      setMessage(error.message)
+      console.error("[v0] Franchise signup error:", error)
+      setMessage(error.message || "An error occurred during registration. Please try again.")
     } finally {
       setLoading(false)
     }
