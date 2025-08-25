@@ -1,3 +1,5 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -7,17 +9,70 @@ import { ScrollAnimation } from "@/components/scroll-animation"
 import Link from "next/link"
 import Image from "next/image"
 import { Calendar, ArrowRight, BookOpen, TrendingUp, Briefcase, Building, AlertCircle } from "lucide-react"
-import { getPublishedBlogPosts } from "@/lib/supabase/queries"
+import { createClient } from "@/lib/supabase/client"
+import { useEffect, useState } from "react"
 
-export default async function BlogPage() {
-  let blogPosts = []
-  let hasError = false
+interface BlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt?: string
+  content: string
+  featured_image?: string
+  category: string
+  tags: string[]
+  status: "draft" | "published" | "archived"
+  published_at?: string
+  created_at: string
+}
 
-  try {
-    blogPosts = await getPublishedBlogPosts()
-  } catch (error) {
-    console.error("Error fetching blog posts:", error)
-    hasError = true
+export default function BlogPage() {
+  const [blogPosts, setBlogPosts] = useState<BlogPost[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+
+  useEffect(() => {
+    async function fetchBlogPosts() {
+      try {
+        const supabase = createClient()
+        const { data, error } = await supabase
+          .from("blog_posts")
+          .select("*")
+          .eq("status", "published")
+          .order("published_at", { ascending: false })
+
+        if (error) {
+          console.error("Error fetching blog posts:", error)
+          setHasError(true)
+        } else {
+          setBlogPosts(data || [])
+        }
+      } catch (error) {
+        console.error("Error fetching blog posts:", error)
+        setHasError(true)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchBlogPosts()
+  }, [])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <section className="py-20 bg-background">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+            <div className="space-y-4">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="text-muted-foreground">Loading blog posts...</p>
+            </div>
+          </div>
+        </section>
+        <Footer />
+      </div>
+    )
   }
 
   if (hasError || blogPosts.length === 0) {
