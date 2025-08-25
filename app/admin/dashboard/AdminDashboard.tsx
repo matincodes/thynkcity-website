@@ -20,6 +20,7 @@ import {
   Edit,
   Plus,
   Loader2,
+  Users,
 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import type { Testimonial, BlogPost, GalleryImage, PortfolioItem, Course } from "@/lib/supabase/queries"
@@ -32,6 +33,23 @@ interface AdminDashboardProps {
   user: User
 }
 
+interface Registration {
+  id: string
+  type: "individual" | "parent"
+  name: string
+  email: string
+  phone: string
+  age?: number
+  course_interest: string
+  children?: Array<{
+    name: string
+    age: number
+    course_interest: string
+  }>
+  status: "pending" | "contacted" | "enrolled" | "declined"
+  created_at: string
+}
+
 export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
   const [testimonials, setTestimonials] = useState<Testimonial[]>([])
@@ -39,6 +57,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([])
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [courses, setCourses] = useState<Course[]>([])
+  const [registrations, setRegistrations] = useState<Registration[]>([]) // Added registrations state
   const [loading, setLoading] = useState(true)
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -51,6 +70,8 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     totalGalleryImages: 0,
     totalPortfolioItems: 0,
     totalCourses: 0,
+    totalRegistrations: 0, // Added registration stats
+    pendingRegistrations: 0,
   })
 
   const router = useRouter()
@@ -90,11 +111,17 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       // Fetch courses
       const { data: coursesData } = await supabase.from("courses").select("*").order("created_at", { ascending: false })
 
+      const { data: registrationsData } = await supabase
+        .from("registrations")
+        .select("*")
+        .order("created_at", { ascending: false })
+
       setTestimonials(testimonialsData || [])
       setBlogPosts(blogPostsData || [])
       setGalleryImages(galleryData || [])
       setPortfolioItems(portfolioData || [])
       setCourses(coursesData || [])
+      setRegistrations(registrationsData || []) // Set registrations data
 
       // Calculate stats
       setStats({
@@ -105,6 +132,8 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         totalGalleryImages: galleryData?.length || 0,
         totalPortfolioItems: portfolioData?.length || 0,
         totalCourses: coursesData?.length || 0,
+        totalRegistrations: registrationsData?.length || 0, // Added registration stats
+        pendingRegistrations: registrationsData?.filter((r) => r.status === "pending").length || 0,
       })
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -171,6 +200,9 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         case "courses":
           setCourses((prev) => prev.filter((item) => item.id !== id))
           break
+        case "registrations":
+          setRegistrations((prev) => prev.filter((item) => item.id !== id))
+          break
       }
 
       setDeleteConfirm(null)
@@ -188,6 +220,19 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)))
     } catch (error) {
       console.error("Error toggling testimonial visibility:", error)
+    }
+  }
+
+  const updateRegistrationStatus = async (id: string, status: "pending" | "contacted" | "enrolled" | "declined") => {
+    try {
+      const { error } = await supabase.from("registrations").update({ status }).eq("id", id)
+
+      if (error) throw error
+
+      setRegistrations((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
+      await fetchAllData() // Refresh stats
+    } catch (error) {
+      console.error("Error updating registration:", error)
     }
   }
 
@@ -278,6 +323,19 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               <GraduationCap className="h-4 w-4 mr-2" />
               Courses
             </Button>
+            <Button
+              variant={activeTab === "registrations" ? "default" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("registrations")}
+            >
+              <Users className="h-4 w-4 mr-2" />
+              Registrations
+              {stats.pendingRegistrations > 0 && (
+                <Badge variant="destructive" className="ml-auto">
+                  {stats.pendingRegistrations}
+                </Badge>
+              )}
+            </Button>
           </nav>
         </aside>
 
@@ -332,6 +390,17 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   <CardContent>
                     <div className="text-2xl font-bold">{stats.totalCourses}</div>
                     <p className="text-xs text-muted-foreground">Available courses</p>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover-lift smooth-transition">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Registrations</CardTitle>
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalRegistrations}</div>
+                    <p className="text-xs text-muted-foreground">{stats.pendingRegistrations} pending review</p>
                   </CardContent>
                 </Card>
               </div>
@@ -752,6 +821,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                               {course.status}
                             </Badge>
                           </TableCell>
+                          <TableCell>{new Date(course.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <div className="flex space-x-2">
                               <Button
@@ -783,9 +853,139 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               </Card>
             </div>
           )}
+
+          {activeTab === "registrations" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold font-montserrat">Student Registrations</h2>
+                  <p className="text-muted-foreground">Manage course registration inquiries and enrollments</p>
+                </div>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>All Registrations</CardTitle>
+                  <CardDescription>Review and manage student registration requests</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Contact</TableHead>
+                        <TableHead>Course Interest</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {registrations.map((registration) => (
+                        <TableRow key={registration.id}>
+                          <TableCell className="font-medium">
+                            <div>
+                              <div>{registration.name}</div>
+                              {registration.type === "parent" && registration.children && (
+                                <div className="text-sm text-muted-foreground">
+                                  Children: {registration.children.map((child) => child.name).join(", ")}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">{registration.type === "individual" ? "Student" : "Parent"}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              <div>{registration.email}</div>
+                              <div className="text-muted-foreground">{registration.phone}</div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {registration.type === "individual" ? (
+                                <Badge variant="secondary">{registration.course_interest}</Badge>
+                              ) : (
+                                <div className="space-y-1">
+                                  {registration.children?.map((child, index) => (
+                                    <Badge key={index} variant="secondary" className="mr-1">
+                                      {child.course_interest}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                registration.status === "enrolled"
+                                  ? "default"
+                                  : registration.status === "contacted"
+                                    ? "secondary"
+                                    : registration.status === "pending"
+                                      ? "outline"
+                                      : "destructive"
+                              }
+                            >
+                              {registration.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(registration.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            <div className="flex space-x-2">
+                              {registration.status === "pending" && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => updateRegistrationStatus(registration.id, "contacted")}
+                                  className="hover-lift"
+                                >
+                                  Contact
+                                </Button>
+                              )}
+                              {registration.status === "contacted" && (
+                                <>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => updateRegistrationStatus(registration.id, "enrolled")}
+                                    className="hover-lift"
+                                  >
+                                    Enroll
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => updateRegistrationStatus(registration.id, "declined")}
+                                    className="hover-lift bg-transparent"
+                                  >
+                                    Decline
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setDeleteConfirm({ type: "registrations", id: registration.id })}
+                                className="hover-lift"
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </main>
       </div>
 
+      {/* Existing modals */}
       {showAddModal && editingItem && (
         <>
           {editingItem.type === "blog" && (

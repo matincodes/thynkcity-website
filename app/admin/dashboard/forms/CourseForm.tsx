@@ -31,11 +31,11 @@ export default function CourseForm({ course, onClose, onSave }: CourseFormProps)
     duration_weeks: 24,
     sessions_per_week: 3,
     price: 0,
-    target_audience: "adults",
-    difficulty_level: "beginner",
+    category: "adults",
+    level: "beginner",
     prerequisites: [] as string[],
     learning_outcomes: [] as string[],
-    featured_image: "",
+    image_url: "",
     status: "active",
   })
   const [curriculum, setCurriculum] = useState<Module[]>([])
@@ -53,11 +53,11 @@ export default function CourseForm({ course, onClose, onSave }: CourseFormProps)
         duration_weeks: course.duration_weeks || 24,
         sessions_per_week: course.sessions_per_week || 3,
         price: course.price || 0,
-        target_audience: course.target_audience || "adults",
-        difficulty_level: course.difficulty_level || "beginner",
+        category: course.category || "adults",
+        level: course.level || "beginner",
         prerequisites: Array.isArray(course.prerequisites) ? course.prerequisites : [],
         learning_outcomes: Array.isArray(course.learning_outcomes) ? course.learning_outcomes : [],
-        featured_image: course.featured_image || "",
+        image_url: course.image_url || "",
         status: course.status || "active",
       })
 
@@ -262,10 +262,10 @@ export default function CourseForm({ course, onClose, onSave }: CourseFormProps)
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="target_audience">Target Audience</Label>
+                  <Label htmlFor="category">Category</Label>
                   <Select
-                    value={formData.target_audience}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, target_audience: value }))}
+                    value={formData.category}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, category: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -273,15 +273,14 @@ export default function CourseForm({ course, onClose, onSave }: CourseFormProps)
                     <SelectContent>
                       <SelectItem value="adults">Adults</SelectItem>
                       <SelectItem value="kids">Kids</SelectItem>
-                      <SelectItem value="teenagers">Teenagers</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="difficulty_level">Difficulty Level</Label>
+                  <Label htmlFor="level">Level</Label>
                   <Select
-                    value={formData.difficulty_level}
-                    onValueChange={(value) => setFormData((prev) => ({ ...prev, difficulty_level: value }))}
+                    value={formData.level}
+                    onValueChange={(value) => setFormData((prev) => ({ ...prev, level: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -326,11 +325,11 @@ export default function CourseForm({ course, onClose, onSave }: CourseFormProps)
               </div>
 
               <div>
-                <Label htmlFor="featured_image">Featured Image URL</Label>
+                <Label htmlFor="image_url">Featured Image URL</Label>
                 <Input
-                  id="featured_image"
-                  value={formData.featured_image}
-                  onChange={(e) => setFormData((prev) => ({ ...prev, featured_image: e.target.value }))}
+                  id="image_url"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData((prev) => ({ ...prev, image_url: e.target.value }))}
                   placeholder="https://example.com/image.jpg"
                 />
               </div>

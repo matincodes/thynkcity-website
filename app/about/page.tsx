@@ -43,6 +43,24 @@ export default function AboutPage() {
       image: "/team/abdulmatin-adeniji.jpg",
     },
     {
+      name: "Idris Muhammed",
+      role: "Co-founder & Chief Operations Officer",
+      bio: "Strategic operations leader with deep expertise in scaling educational programs across African markets and building sustainable business operations.",
+      image: "/team/idris-muhammed.jpg",
+    },
+    {
+      name: "Fawaz Adeniji",
+      role: "Lead Developer",
+      bio: "Full-stack engineer and technical architect leading the development of innovative educational technology solutions and AI-powered platforms.",
+      image: "/team/fawaz-adeniji.jpg",
+    },
+    {
+      name: "Divine Effiong",
+      role: "Lead Designer",
+      bio: "Creative design leader specializing in user experience and interface design for educational platforms, ensuring accessibility and engagement across diverse user bases.",
+      image: "/team/divine-effiong.jpg",
+    },
+    {
       name: "Sarah Ikechukwu",
       role: "Chief Technology Officer",
       bio: "Full-stack engineer and AI specialist. Led development teams at top tech companies before joining Thynkcity's mission.",
@@ -199,7 +217,7 @@ export default function AboutPage() {
 
               <div className="space-y-6">
                 <p className="text-muted-foreground leading-relaxed">
-                  In 2020, our founder Abdulmatin Adeniji, driven by a passion for education and technology, established
+                  In 2023, our founder Abdulmatin Adeniji, driven by a passion for education and technology, established
                   Thynkcity with a clear mission. Having witnessed firsthand the incredible potential of African talent
                   and the barriers they face in accessing quality education, he set out to create a platform that would
                   bridge this gap and unlock opportunities for millions across the continent.
@@ -208,8 +226,10 @@ export default function AboutPage() {
                 <p className="text-muted-foreground leading-relaxed">
                   What started as a vision to democratize access to technology education has evolved into a
                   comprehensive ecosystem that addresses every aspect of personal and professional development. Under
-                  Abdulmatin's leadership, we've trained thousands of students, helped hundreds of businesses transform
-                  digitally, and partnered with schools across the continent to modernize education.
+                  Abdulmatin's leadership, alongside co-founder and Chief Operations Officer Idris Muhammed, Lead
+                  Developer Fawaz Adeniji, and Lead Designer Divine Effiong, we've trained thousands of students, helped
+                  hundreds of businesses transform digitally, and partnered with schools across the continent to
+                  modernize education.
                 </p>
 
                 <p className="text-muted-foreground leading-relaxed">

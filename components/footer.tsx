@@ -138,15 +138,15 @@ export function Footer() {
             <div className="space-y-3 text-sm">
               <div className="flex items-center space-x-2">
                 <Mail className="h-4 w-4" />
-                <span>info@thynkcity.com</span>
+                <span>build@thynkcity.com</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Phone className="h-4 w-4" />
-                <span>+234 (0) 123 456 7890</span>
+                <span>+234 902 532 0287</span>
               </div>
               <div className="flex items-center space-x-2">
                 <MapPin className="h-4 w-4" />
-                <span>Lagos, Nigeria</span>
+                <span>10 Adeniji Street, Oregun, Ikeja, Lagos</span>
               </div>
             </div>
 
@@ -172,7 +172,7 @@ export function Footer() {
 
         <div className="mt-8 pt-8 border-t border-secondary-foreground/20">
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-sm text-secondary-foreground/60">© 2024 Thynkcity. All rights reserved.</p>
+            <p className="text-sm text-secondary-foreground/60">© 2023 Thynkcity. All rights reserved.</p>
             <div className="flex space-x-6 text-sm">
               <Link
                 href="/privacy"

@@ -381,6 +381,127 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ThynkAI and ThynkBot Section */}
+      <section className="py-20 bg-gradient-to-br from-primary/5 via-background to-primary/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <ScrollAnimation className="text-center space-y-4 mb-16">
+            <Badge variant="outline" className="text-primary border-primary text-lg px-4 py-2">
+              Flagship AI Products
+            </Badge>
+            <h2 className="text-3xl lg:text-4xl font-bold font-montserrat text-foreground">
+              Powered by <span className="text-primary">ThynkAI</span> & <span className="text-primary">ThynkBot</span>
+            </h2>
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+              Our cutting-edge AI technologies power every aspect of the Thynkcity ecosystem, delivering intelligent
+              solutions that transform education and business across Africa.
+            </p>
+          </ScrollAnimation>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+            {/* ThynkAI Card */}
+            <ScrollAnimation className="animate-stagger-1">
+              <Card className="group hover:shadow-2xl hover-lift smooth-transition border-2 hover:border-primary/30 bg-gradient-to-br from-background to-primary/5">
+                <CardHeader className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center group-hover:scale-110 smooth-transition">
+                      <Bot className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-montserrat text-primary">ThynkAI</CardTitle>
+                      <CardDescription className="text-lg">Intelligent Learning Engine</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="relative">
+                    <Image
+                      src="/ai-brain-neural-network-visualization.png"
+                      alt="AI brain with neural network connections representing ThynkAI's intelligent learning capabilities"
+                      width={400}
+                      height={250}
+                      className="rounded-xl w-full object-cover hover-scale smooth-transition"
+                    />
+                  </div>
+                  <p className="text-muted-foreground">
+                    Our proprietary AI engine that personalizes learning experiences, matches students with ideal
+                    tutors, and provides intelligent insights for educational success.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm">Personalized Learning Paths</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm">Smart Tutor Matching</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm">Predictive Analytics</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </ScrollAnimation>
+
+            {/* ThynkBot Card */}
+            <ScrollAnimation className="animate-stagger-2">
+              <Card className="group hover:shadow-2xl hover-lift smooth-transition border-2 hover:border-primary/30 bg-gradient-to-br from-background to-primary/5">
+                <CardHeader className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary/70 rounded-2xl flex items-center justify-center group-hover:scale-110 smooth-transition">
+                      <Zap className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-montserrat text-primary">ThynkBot</CardTitle>
+                      <CardDescription className="text-lg">AI Assistant & Automation</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="relative">
+                    <Image
+                      src="/chatbot-interface-african-students.png"
+                      alt="Modern chatbot interface helping African students with educational queries and support"
+                      width={400}
+                      height={250}
+                      className="rounded-xl w-full object-cover hover-scale smooth-transition"
+                    />
+                  </div>
+                  <p className="text-muted-foreground">
+                    An intelligent conversational AI that provides 24/7 support, automates administrative tasks, and
+                    enhances user experience across all Thynkcity platforms.
+                  </p>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm">24/7 Student Support</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm">Automated Scheduling</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <div className="w-2 h-2 bg-primary rounded-full"></div>
+                      <span className="text-sm">Intelligent Q&A</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </ScrollAnimation>
+          </div>
+
+          <ScrollAnimation className="text-center mt-12">
+            <Button size="lg" asChild className="btn-animate hover-lift">
+              <Link href="/products">
+                Explore Our AI-Powered Ecosystem
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
+            </Button>
+          </ScrollAnimation>
+        </div>
+      </section>
+
       {/* Social Proof Section */}
       <section className="py-20 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

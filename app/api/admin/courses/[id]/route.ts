@@ -6,12 +6,29 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const supabase = await createServerClient()
     const body = await request.json()
 
+    const validFields = {
+      title: body.title,
+      slug: body.slug,
+      description: body.description,
+      curriculum: body.curriculum,
+      duration_weeks: body.duration_weeks,
+      sessions_per_week: body.sessions_per_week,
+      price: body.price,
+      category: body.category,
+      level: body.level,
+      prerequisites: body.prerequisites,
+      learning_outcomes: body.learning_outcomes,
+      image_url: body.image_url,
+      status: body.status,
+      updated_at: new Date().toISOString(),
+    }
+
+    // Remove undefined fields
+    const updateData = Object.fromEntries(Object.entries(validFields).filter(([_, value]) => value !== undefined))
+
     const { data: course, error } = await supabase
       .from("courses")
-      .update({
-        ...body,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq("id", params.id)
       .select()
       .single()

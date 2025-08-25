@@ -82,18 +82,34 @@ export default function AdminLoginPage() {
         throw new Error("Password must be at least 6 characters long")
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/admin/dashboard`,
+          emailRedirectTo: `${window.location.origin}/admin/verify-email`,
         },
       })
 
       if (error) throw error
 
-      setSuccess("Admin account created successfully! Please check your email to verify your account.")
+      const response = await fetch("/api/admin/send-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          userId: data.user?.id,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Failed to send verification email")
+      }
+
+      setSuccess(
+        "Admin account created! Please check your email and click the verification link to activate your account.",
+      )
       setEmail("")
       setPassword("")
       setConfirmPassword("")
