@@ -69,6 +69,18 @@ export default function FranchiseSignupPage() {
     try {
       console.log("[v0] Starting franchise signup process")
 
+      const { data: existingProfile } = await supabase
+        .from("franchisee_profiles")
+        .select("id")
+        .eq("email", formData.email)
+        .single()
+
+      if (existingProfile) {
+        throw new Error(
+          "A franchisee application with this email already exists. Please use a different email or contact support.",
+        )
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,

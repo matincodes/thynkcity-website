@@ -55,17 +55,17 @@ interface Registration {
 
 interface Franchisee {
   id: string
-  business_name: string
-  owner_name: string
+  full_name: string
   email: string
-  phone: string
-  location: string
-  status: "pending" | "approved" | "rejected" | "suspended"
+  phone_number: string
+  country: string
+  state_city: string
+  territory: string
+  statement: string
+  status: "pending" | "approved" | "rejected" | "suspended" | "active"
   created_at: string
-  approved_at?: string
-  total_schools: number
-  active_proposals: number
-  monthly_revenue: number
+  verified_at?: string
+  user_id: string
 }
 
 interface DiscountRequest {
@@ -182,27 +182,19 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         supabase.from("portfolio_items").select("*").order("created_at", { ascending: false }),
         supabase.from("courses").select("*").order("created_at", { ascending: false }),
         supabase.from("registrations").select("*").order("created_at", { ascending: false }),
-        supabase
-          .from("franchisees")
-          .select(`
-          *,
-          schools:schools(count),
-          proposals:proposals(count),
-          discount_requests:discount_requests(count)
-        `)
-          .order("created_at", { ascending: false }),
+        supabase.from("franchisee_profiles").select("*").order("created_at", { ascending: false }),
         supabase
           .from("discount_requests")
           .select(`
           *,
-          franchisee:franchisees(business_name)
+          franchisee:franchisee_profiles(full_name)
         `)
           .order("created_at", { ascending: false }),
         supabase
-          .from("franchise_activities")
+          .from("franchise_activity_log")
           .select(`
           *,
-          franchisee:franchisees(business_name)
+          franchisee:franchisee_profiles(full_name)
         `)
           .order("created_at", { ascending: false })
           .limit(50),
@@ -259,22 +251,22 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
   const handleFranchiseeAction = async (franchiseeId: string, action: "approve" | "reject" | "suspend") => {
     try {
-      const status = action === "approve" ? "approved" : action === "reject" ? "rejected" : "suspended"
+      const status = action === "approve" ? "active" : action === "reject" ? "rejected" : "suspended"
       const updateData: any = { status }
 
       if (action === "approve") {
-        updateData.approved_at = new Date().toISOString()
+        updateData.verified_at = new Date().toISOString()
       }
 
-      const { error } = await supabase.from("franchisees").update(updateData).eq("id", franchiseeId)
+      const { error } = await supabase.from("franchisee_profiles").update(updateData).eq("id", franchiseeId)
 
       if (error) throw error
 
       if (action === "approve") {
         // Get franchisee details for email
         const { data: franchisee } = await supabase
-          .from("franchisees")
-          .select("email, business_name, contact_name")
+          .from("franchisee_profiles")
+          .select("email, full_name")
           .eq("id", franchiseeId)
           .single()
 
@@ -286,7 +278,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               body: JSON.stringify({
                 email: franchisee.email,
                 franchiseeId: franchiseeId,
-                franchiseeName: franchisee.contact_name || franchisee.business_name,
+                franchiseeName: franchisee.full_name,
               }),
             })
           } catch (emailError) {
@@ -297,7 +289,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       }
 
       // Log activity
-      await supabase.from("franchise_activities").insert({
+      await supabase.from("franchise_activity_log").insert({
         franchisee_id: franchiseeId,
         activity_type: "status_change",
         description: `Franchisee ${action}d by admin`,
@@ -674,12 +666,11 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Business Name</TableHead>
-                        <TableHead>Owner</TableHead>
-                        <TableHead>Location</TableHead>
+                        <TableHead>Full Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Territory</TableHead>
+                        <TableHead>Country</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead>Schools</TableHead>
-                        <TableHead>Revenue</TableHead>
                         <TableHead>Applied</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -687,13 +678,14 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                     <TableBody>
                       {franchisees.map((franchisee) => (
                         <TableRow key={franchisee.id}>
-                          <TableCell className="font-medium">{franchisee.business_name}</TableCell>
-                          <TableCell>{franchisee.owner_name}</TableCell>
-                          <TableCell>{franchisee.location}</TableCell>
+                          <TableCell className="font-medium">{franchisee.full_name}</TableCell>
+                          <TableCell>{franchisee.email}</TableCell>
+                          <TableCell>{franchisee.territory}</TableCell>
+                          <TableCell className="capitalize">{franchisee.country}</TableCell>
                           <TableCell>
                             <Badge
                               variant={
-                                franchisee.status === "approved"
+                                franchisee.status === "active" || franchisee.status === "approved"
                                   ? "default"
                                   : franchisee.status === "pending"
                                     ? "secondary"
@@ -705,8 +697,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                               {franchisee.status}
                             </Badge>
                           </TableCell>
-                          <TableCell>{franchisee.total_schools || 0}</TableCell>
-                          <TableCell>₦{(franchisee.monthly_revenue || 0).toLocaleString()}</TableCell>
                           <TableCell>{new Date(franchisee.created_at).toLocaleDateString()}</TableCell>
                           <TableCell>
                             <div className="flex gap-2">
@@ -724,7 +714,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                                   </Button>
                                 </>
                               )}
-                              {franchisee.status === "approved" && (
+                              {(franchisee.status === "active" || franchisee.status === "approved") && (
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -733,6 +723,17 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                                   Suspend
                                 </Button>
                               )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  alert(
+                                    `Franchisee Details:\n\nName: ${franchisee.full_name}\nEmail: ${franchisee.email}\nPhone: ${franchisee.phone_number}\nTerritory: ${franchisee.territory}\nCountry: ${franchisee.country}\nState/City: ${franchisee.state_city}\n\nStatement:\n${franchisee.statement}`,
+                                  )
+                                }}
+                              >
+                                View Details
+                              </Button>
                             </div>
                           </TableCell>
                         </TableRow>
