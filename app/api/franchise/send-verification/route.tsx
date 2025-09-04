@@ -8,12 +8,17 @@ export async function POST(request: NextRequest) {
   try {
     const { email, franchiseeId, franchiseeName } = await request.json()
 
+    console.log("[v0] Franchise verification email request:", { email, franchiseeId, franchiseeName })
+    console.log("[v0] RESEND_API_KEY exists:", !!process.env.RESEND_API_KEY)
+    console.log("[v0] RESEND_API_KEY value:", process.env.RESEND_API_KEY?.substring(0, 10) + "...")
+
     if (!email || !franchiseeId) {
+      console.log("[v0] Missing required fields:", { email: !!email, franchiseeId: !!franchiseeId })
       return NextResponse.json({ error: "Email and franchiseeId are required" }, { status: 400 })
     }
 
     if (!process.env.RESEND_API_KEY) {
-      console.error("RESEND_API_KEY is not configured")
+      console.error("[v0] RESEND_API_KEY is not configured")
       return NextResponse.json({ error: "Email service not configured" }, { status: 500 })
     }
 
@@ -22,6 +27,8 @@ export async function POST(request: NextRequest) {
     // Generate verification token
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+
+    console.log("[v0] Generated verification token:", token.substring(0, 8) + "...")
 
     // Store verification token in franchisee_verifications table
     const { error: insertError } = await supabase.from("franchisee_verifications").insert({
@@ -32,11 +39,21 @@ export async function POST(request: NextRequest) {
     })
 
     if (insertError) {
-      console.error("Database insert error:", insertError)
+      console.error("[v0] Database insert error:", insertError)
       return NextResponse.json({ error: "Failed to create verification record" }, { status: 500 })
     }
 
+    console.log("[v0] Verification record created successfully")
+
     const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/franchise/verify-email?token=${token}`
+    console.log("[v0] Verification URL:", verificationUrl)
+
+    console.log("[v0] Attempting to send email via Resend...")
+    console.log("[v0] Email details:", {
+      from: "Thynkcity Partnership <partnerships@thynkcity.com>",
+      to: email,
+      subject: "Welcome to the Thynkcity Franchise Network!",
+    })
 
     const { data, error } = await resend.emails.send({
       from: "Thynkcity Partnership <partnerships@thynkcity.com>",
@@ -115,14 +132,17 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error("Resend error:", error)
-      return NextResponse.json({ error: "Failed to send verification email" }, { status: 500 })
+      console.error("[v0] Resend API error:", error)
+      console.error("[v0] Resend error details:", JSON.stringify(error, null, 2))
+      return NextResponse.json({ error: "Failed to send verification email", details: error }, { status: 500 })
     }
 
-    console.log("Franchisee verification email sent successfully:", data)
-    return NextResponse.json({ message: "Verification email sent successfully" })
+    console.log("[v0] Resend API response:", data)
+    console.log("[v0] Franchisee verification email sent successfully to:", email)
+    return NextResponse.json({ message: "Verification email sent successfully", emailId: data?.id })
   } catch (error) {
-    console.error("Send franchisee verification error:", error)
+    console.error("[v0] Send franchisee verification error:", error)
+    console.error("[v0] Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

@@ -32,26 +32,32 @@ export default function FranchiseSignupPage() {
   })
 
   const createProfile = async (userData: any) => {
-    console.log("[v0] Creating franchisee profile")
+    console.log("[v0] Creating franchisee profile via API")
 
-    const { error: profileError } = await supabase.from("franchisee_profiles").insert({
-      user_id: userData.id,
-      full_name: formData.fullName,
-      email: formData.email,
-      phone_number: formData.phoneNumber,
-      country: formData.country,
-      state_city: formData.stateCity,
-      territory: formData.territory,
-      statement: formData.statement,
-      status: "pending",
+    const response = await fetch("/api/franchise/create-profile", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: userData.id,
+        fullName: formData.fullName,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        country: formData.country,
+        stateCity: formData.stateCity,
+        territory: formData.territory,
+        statement: formData.statement,
+      }),
     })
 
-    if (profileError) {
-      console.error("[v0] Profile creation error:", profileError)
-      throw new Error(`Profile creation failed: ${profileError.message}`)
+    if (!response.ok) {
+      const errorData = await response.json()
+      console.error("[v0] Profile creation error:", errorData.error)
+      throw new Error(`Profile creation failed: ${errorData.error}`)
     }
 
-    console.log("[v0] Franchisee profile created successfully")
+    const result = await response.json()
+    console.log("[v0] Franchisee profile created successfully via API")
+
     return { success: true }
   }
 
@@ -97,7 +103,7 @@ export default function FranchiseSignupPage() {
       await createProfile(data.user)
 
       setMessage(
-        "Application submitted successfully! Please check your email to verify your account, then wait for admin approval.",
+        "Application submitted successfully! Please check your email for a verification link to activate your account once approved by our team.",
       )
       setFormData({
         email: "",

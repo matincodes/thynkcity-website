@@ -1,7 +1,8 @@
 -- Create franchisee verification table for email verification
 CREATE TABLE IF NOT EXISTS franchisee_verifications (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  franchisee_id UUID NOT NULL REFERENCES franchisees(id) ON DELETE CASCADE,
+  -- Fixed foreign key reference from franchisees(id) to franchisee_profiles(id)
+  franchisee_id UUID NOT NULL REFERENCES franchisee_profiles(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
   token TEXT NOT NULL UNIQUE,
   verified BOOLEAN DEFAULT FALSE,
