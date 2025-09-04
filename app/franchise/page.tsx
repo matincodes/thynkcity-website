@@ -20,7 +20,7 @@ export default function FranchisePage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
-              <Link href="/franchise/login">Apply Now</Link>
+              <Link href="/franchise/signup">Apply Now</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link href="/franchise/login">Franchisee Login</Link>
@@ -123,7 +123,7 @@ export default function FranchisePage() {
             business.
           </p>
           <Button asChild size="lg" variant="secondary" className="bg-white text-blue-600 hover:bg-gray-100">
-            <Link href="/franchise/login">Get Started Today</Link>
+            <Link href="/franchise/signup">Get Started Today</Link>
           </Button>
         </div>
       </div>

@@ -1,20 +1,17 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { Eye, EyeOff } from "lucide-react"
+import Link from "next/link"
 
 export default function FranchiseLoginPage() {
-  const [isLogin, setIsLogin] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
@@ -24,12 +21,6 @@ export default function FranchiseLoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
-    fullName: "",
-    phoneNumber: "",
-    country: "",
-    stateCity: "",
-    territory: "",
-    statement: "",
   })
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -73,149 +64,15 @@ export default function FranchiseLoginPage() {
     }
   }
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage("")
-
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          emailRedirectTo:
-            process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/franchise/dashboard`,
-        },
-      })
-
-      if (error) throw error
-
-      if (data.user) {
-        await new Promise((resolve) => setTimeout(resolve, 1000))
-
-        const { data: authUser, error: authError } = await supabase.auth.getUser()
-
-        if (authError || !authUser.user) {
-          throw new Error("Failed to create user account. Please try again.")
-        }
-
-        // Create franchisee profile
-        const { error: profileError } = await supabase.from("franchisee_profiles").insert({
-          user_id: data.user.id,
-          full_name: formData.fullName,
-          email: formData.email,
-          phone_number: formData.phoneNumber,
-          country: formData.country,
-          state_city: formData.stateCity,
-          territory: formData.territory,
-          statement: formData.statement,
-          status: "pending",
-        })
-
-        if (profileError) {
-          if (profileError.message.includes("foreign key constraint")) {
-            throw new Error("Account creation failed. Please try again or contact support.")
-          }
-          throw profileError
-        }
-
-        setMessage("Application submitted successfully! Please wait for admin approval.")
-        setFormData({
-          email: "",
-          password: "",
-          fullName: "",
-          phoneNumber: "",
-          country: "",
-          stateCity: "",
-          territory: "",
-          statement: "",
-        })
-      }
-    } catch (error: any) {
-      console.error("[v0] Franchise signup error:", error)
-      setMessage(error.message || "An error occurred during registration. Please try again.")
-    } finally {
-      setLoading(false)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            {isLogin ? "Franchisee Login" : "Franchisee Application"}
-          </CardTitle>
-          <CardDescription>
-            {isLogin ? "Access your franchise portal" : "Apply to become a Thynkcity franchisee"}
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold text-gray-900">Franchisee Login</CardTitle>
+          <CardDescription>Access your franchise portal</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={isLogin ? handleLogin : handleSignup} className="space-y-4">
-            {!isLogin && (
-              <>
-                <div>
-                  <Label htmlFor="fullName">Full Name *</Label>
-                  <Input
-                    id="fullName"
-                    type="text"
-                    required
-                    value={formData.fullName}
-                    onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="phoneNumber">Phone Number *</Label>
-                  <Input
-                    id="phoneNumber"
-                    type="tel"
-                    required
-                    value={formData.phoneNumber}
-                    onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="country">Country *</Label>
-                  <Select
-                    value={formData.country}
-                    onValueChange={(value) => setFormData({ ...formData, country: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select country" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="nigeria">Nigeria</SelectItem>
-                      <SelectItem value="ghana">Ghana</SelectItem>
-                      <SelectItem value="kenya">Kenya</SelectItem>
-                      <SelectItem value="south-africa">South Africa</SelectItem>
-                      <SelectItem value="other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="stateCity">State / City *</Label>
-                  <Input
-                    id="stateCity"
-                    type="text"
-                    required
-                    value={formData.stateCity}
-                    onChange={(e) => setFormData({ ...formData, stateCity: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="territory">Proposed Operational Territory *</Label>
-                  <Input
-                    id="territory"
-                    type="text"
-                    required
-                    placeholder="e.g., Ikeja, Lagos"
-                    value={formData.territory}
-                    onChange={(e) => setFormData({ ...formData, territory: e.target.value })}
-                  />
-                </div>
-              </>
-            )}
-
+          <form onSubmit={handleLogin} className="space-y-4">
             <div>
               <Label htmlFor="email">Email Address *</Label>
               <Input
@@ -249,39 +106,20 @@ export default function FranchiseLoginPage() {
               </div>
             </div>
 
-            {!isLogin && (
-              <div>
-                <Label htmlFor="statement">Brief Statement of Intent / Business Experience *</Label>
-                <Textarea
-                  id="statement"
-                  required
-                  placeholder="Explain why you want to be a Thynkcity franchisee and any relevant experience..."
-                  value={formData.statement}
-                  onChange={(e) => setFormData({ ...formData, statement: e.target.value })}
-                  rows={4}
-                />
-              </div>
-            )}
-
-            {message && (
-              <div
-                className={`p-3 rounded-md text-sm ${
-                  message.includes("success") ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-                }`}
-              >
-                {message}
-              </div>
-            )}
+            {message && <div className="p-3 rounded-md text-sm bg-red-50 text-red-700">{message}</div>}
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Processing..." : isLogin ? "Login" : "Submit Application"}
+              {loading ? "Processing..." : "Login"}
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
-            <Button variant="link" onClick={() => setIsLogin(!isLogin)} className="text-sm">
-              {isLogin ? "Apply to become a franchisee" : "Already have an account? Login"}
-            </Button>
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600 mb-3">Don't have an account?</p>
+            <Link href="/franchise/signup">
+              <Button variant="outline" className="w-full bg-transparent">
+                Apply to Become a Franchisee
+              </Button>
+            </Link>
           </div>
         </CardContent>
       </Card>
