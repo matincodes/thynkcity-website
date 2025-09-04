@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Update franchisee status to active and set verified_at
     const { error: updateFranchiseeError } = await supabase
-      .from("franchisees")
+      .from("franchisee_profiles")
       .update({
         status: "active",
         verified_at: new Date().toISOString(),
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Log the verification activity
-    await supabase.from("franchise_activities").insert({
+    await supabase.from("franchise_activity_log").insert({
       franchisee_id: verification.franchisee_id,
       activity_type: "account_verified",
       description: "Franchisee email verified and account activated",
