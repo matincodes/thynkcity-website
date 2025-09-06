@@ -12,8 +12,48 @@ export default function FranchiseeVerifyEmailPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const token = searchParams.get("token")
+  const success = searchParams.get("success")
+  const error = searchParams.get("error")
 
   useEffect(() => {
+    if (success === "true") {
+      setStatus("success")
+      setMessage("Your franchise account has been successfully verified! You can now access your dashboard.")
+      // Redirect to franchise dashboard after 3 seconds
+      setTimeout(() => {
+        router.push("/franchise/dashboard")
+      }, 3000)
+      return
+    }
+
+    if (error) {
+      setStatus("error")
+      switch (error) {
+        case "missing-token":
+          setMessage("Invalid verification link. Please check your email for the correct link.")
+          break
+        case "invalid-token":
+          setMessage("Invalid or already used verification token. Please request a new verification email.")
+          break
+        case "expired-token":
+          setStatus("expired")
+          setMessage("Your verification link has expired. Please contact support for a new verification link.")
+          break
+        case "verification-failed":
+          setMessage("Failed to complete verification. Please try again or contact support.")
+          break
+        case "activation-failed":
+          setMessage("Failed to activate franchise account. Please contact support.")
+          break
+        case "server-error":
+          setMessage("An unexpected error occurred. Please try again later.")
+          break
+        default:
+          setMessage("Verification failed. Please try again or contact support.")
+      }
+      return
+    }
+
     if (!token) {
       setStatus("error")
       setMessage("Invalid verification link. Please check your email for the correct link.")
@@ -21,7 +61,7 @@ export default function FranchiseeVerifyEmailPage() {
     }
 
     verifyEmail()
-  }, [token])
+  }, [token, success, error])
 
   const verifyEmail = async () => {
     try {
