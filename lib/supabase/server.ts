@@ -48,4 +48,4 @@ export async function createServiceRoleClient() {
   })
 }
 
-export { createClient as createServerClient }
+export { createClient as createServerClient, createServiceRoleClient as createServiceClient }
