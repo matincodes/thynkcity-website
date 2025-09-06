@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase/server"
+import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,8 +13,8 @@ export async function POST(request: NextRequest) {
 
     console.log("[v0] POST verify-email: Token received:", token.substring(0, 10) + "...")
 
-    const supabase = await createServerClient()
-    console.log("[v0] POST verify-email: Supabase client created successfully")
+    const supabase = createServiceRoleClient()
+    console.log("[v0] POST verify-email: Service role client created successfully")
 
     // Find the verification record
     console.log("[v0] POST verify-email: Searching for verification record")
@@ -105,8 +105,8 @@ export async function GET(request: NextRequest) {
 
     console.log("[v0] GET verify-email: Token received:", token.substring(0, 10) + "...")
 
-    const supabase = await createServerClient()
-    console.log("[v0] GET verify-email: Supabase client created successfully")
+    const supabase = createServiceRoleClient()
+    console.log("[v0] GET verify-email: Service role client created successfully")
 
     // Find the verification record
     console.log("[v0] GET verify-email: Searching for verification record")
