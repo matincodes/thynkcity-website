@@ -29,35 +29,59 @@ export default function FranchiseLoginPage() {
     setMessage("")
 
     try {
+      console.log("[v0] Starting franchise login process for:", formData.email)
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email: formData.email,
         password: formData.password,
       })
 
-      if (error) throw error
+      if (error) {
+        console.log("[v0] Auth error:", error)
+        throw error
+      }
+
+      console.log("[v0] Auth successful, user ID:", data.user.id)
+      console.log("[v0] User data:", data.user)
 
       // Check if user is a franchisee
-      const { data: profile } = await supabase
+      console.log("[v0] Querying franchisee_profiles for user_id:", data.user.id)
+
+      const { data: profile, error: profileError } = await supabase
         .from("franchisee_profiles")
         .select("*")
         .eq("user_id", data.user.id)
         .single()
 
+      console.log("[v0] Profile query result:", { profile, profileError })
+
+      if (profileError) {
+        console.log("[v0] Profile query error:", profileError)
+      }
+
       if (!profile) {
+        console.log("[v0] No franchisee profile found for user")
         setMessage("Access denied. This account is not registered as a franchisee.")
         await supabase.auth.signOut()
         return
       }
 
+      console.log("[v0] Franchisee profile found:", profile)
+      console.log("[v0] Profile status:", profile.status)
+
       if (profile.status === "pending") {
+        console.log("[v0] Redirecting to pending page")
         router.push("/franchise/pending")
       } else if (profile.status === "active") {
+        console.log("[v0] Redirecting to dashboard")
         router.push("/franchise/dashboard")
       } else {
+        console.log("[v0] Account deactivated, status:", profile.status)
         setMessage("Your account has been deactivated. Please contact support.")
         await supabase.auth.signOut()
       }
     } catch (error: any) {
+      console.log("[v0] Login error:", error)
       setMessage(error.message)
     } finally {
       setLoading(false)
