@@ -11,43 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import { BarChart3, Building2, FileText, DollarSign, Plus, LogOut, CheckCircle } from "lucide-react"
-
-interface School {
-  id: string
-  name: string
-  contact_person: string
-  email: string
-  phone: string
-  address: string
-  status: "lead" | "contacted" | "proposal_sent" | "negotiating" | "closed_won" | "closed_lost"
-  estimated_value: number
-  last_contact: string
-  notes: string
-  created_at: string
-}
-
-interface Proposal {
-  id: string
-  school_id: string
-  school_name: string
-  type: "detailed" | "brochure" | "contract"
-  status: "draft" | "sent" | "viewed" | "accepted" | "rejected"
-  amount: number
-  discount_applied: number
-  created_at: string
-  sent_at?: string
-}
-
-interface DiscountRequest {
-  id: string
-  school_name: string
-  original_amount: number
-  requested_discount: number
-  reason: string
-  status: "pending" | "approved" | "rejected"
-  created_at: string
-}
+import { BarChart3, Building2, FileText, DollarSign, Plus, LogOut, CheckCircle, User } from "lucide-react"
 
 export default function FranchiseDashboard() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -58,7 +22,6 @@ export default function FranchiseDashboard() {
   const [proposals, setProposals] = useState<any[]>([])
   const [discountRequests, setDiscountRequests] = useState<any[]>([])
   const [showForm, setShowForm] = useState<string | null>(null)
-  const [editingItem, setEditingItem] = useState<any>(null)
 
   const [stats, setStats] = useState({
     totalSchools: 0,
@@ -87,15 +50,18 @@ export default function FranchiseDashboard() {
         return
       }
 
-      // Check if user is an approved franchisee
       const { data: franchiseeData } = await supabase
-        .from("franchisees")
+        .from("franchisee_profiles")
         .select("*")
-        .eq("email", user.email)
-        .eq("status", "approved")
+        .eq("user_id", user.id)
         .single()
 
       if (!franchiseeData) {
+        router.push("/franchise/login")
+        return
+      }
+
+      if (franchiseeData.status !== "active") {
         router.push("/franchise/pending")
         return
       }
@@ -115,14 +81,15 @@ export default function FranchiseDashboard() {
 
       const [schoolsRes, proposalsRes, discountRequestsRes] = await Promise.all([
         supabase
-          .from("schools")
+          .from("franchise_schools")
           .select("*")
           .eq("franchisee_id", franchiseeId)
           .order("created_at", { ascending: false }),
         supabase
-          .from("proposals")
-          .select("*, school:schools(name)")
+          .from("franchise_documents")
+          .select("*")
           .eq("franchisee_id", franchiseeId)
+          .eq("type", "proposal")
           .order("created_at", { ascending: false }),
         supabase
           .from("discount_requests")
@@ -143,7 +110,9 @@ export default function FranchiseDashboard() {
       const proposalsSent = proposalsRes.data?.filter((p) => p.status !== "draft").length || 0
       const closedDeals = schoolsRes.data?.filter((s) => s.status === "closed_won").length || 0
       const monthlyRevenue =
-        schoolsRes.data?.filter((s) => s.status === "closed_won").reduce((sum, s) => sum + s.estimated_value, 0) || 0
+        schoolsRes.data
+          ?.filter((s) => s.status === "closed_won")
+          .reduce((sum, s) => sum + (s.estimated_value || 0), 0) || 0
       const conversionRate = totalSchools > 0 ? (closedDeals / totalSchools) * 100 : 0
 
       setStats({
@@ -168,7 +137,7 @@ export default function FranchiseDashboard() {
 
   const addSchool = async (schoolData: any) => {
     try {
-      const { error } = await supabase.from("schools").insert({
+      const { error } = await supabase.from("franchise_schools").insert({
         ...schoolData,
         franchisee_id: franchisee.id,
         status: "lead",
@@ -177,7 +146,7 @@ export default function FranchiseDashboard() {
       if (error) throw error
 
       // Log activity
-      await supabase.from("franchise_activities").insert({
+      await supabase.from("franchise_activity_log").insert({
         franchisee_id: franchisee.id,
         activity_type: "school_added",
         description: `Added new school: ${schoolData.name}`,
@@ -193,14 +162,14 @@ export default function FranchiseDashboard() {
   const updateSchoolStatus = async (schoolId: string, status: string) => {
     try {
       const { error } = await supabase
-        .from("schools")
+        .from("franchise_schools")
         .update({ status, last_contact: new Date().toISOString() })
         .eq("id", schoolId)
 
       if (error) throw error
 
       // Log activity
-      await supabase.from("franchise_activities").insert({
+      await supabase.from("franchise_activity_log").insert({
         franchisee_id: franchisee.id,
         activity_type: "status_update",
         description: `Updated school status to: ${status}`,
@@ -217,19 +186,19 @@ export default function FranchiseDashboard() {
       const school = schools.find((s) => s.id === schoolId)
       if (!school) return
 
-      const { error } = await supabase.from("proposals").insert({
-        school_id: schoolId,
+      const { error } = await supabase.from("franchise_documents").insert({
         franchisee_id: franchisee.id,
-        type,
+        school_id: schoolId,
+        type: "proposal",
+        title: `${type} proposal for ${school.name}`,
+        content: `Generated ${type} proposal`,
         status: "draft",
-        amount: school.estimated_value,
-        discount_applied: 0,
       })
 
       if (error) throw error
 
       // Log activity
-      await supabase.from("franchise_activities").insert({
+      await supabase.from("franchise_activity_log").insert({
         franchisee_id: franchisee.id,
         activity_type: "proposal_generated",
         description: `Generated ${type} proposal for ${school.name}`,
@@ -241,16 +210,15 @@ export default function FranchiseDashboard() {
     }
   }
 
-  const requestDiscount = async (proposalId: string, discountData: any) => {
+  const requestDiscount = async (schoolId: string, discountData: any) => {
     try {
-      const proposal = proposals.find((p) => p.id === proposalId)
-      if (!proposal) return
+      const school = schools.find((s) => s.id === schoolId)
+      if (!school) return
 
       const { error } = await supabase.from("discount_requests").insert({
         franchisee_id: franchisee.id,
-        proposal_id: proposalId,
-        school_name: proposal.school_name,
-        original_amount: proposal.amount,
+        school_name: school.name,
+        original_amount: school.estimated_value || 0,
         requested_discount: discountData.discount,
         reason: discountData.reason,
         status: "pending",
@@ -259,10 +227,10 @@ export default function FranchiseDashboard() {
       if (error) throw error
 
       // Log activity
-      await supabase.from("franchise_activities").insert({
+      await supabase.from("franchise_activity_log").insert({
         franchisee_id: franchisee.id,
         activity_type: "discount_requested",
-        description: `Requested ${discountData.discount}% discount for ${proposal.school_name}`,
+        description: `Requested ${discountData.discount}% discount for ${school.name}`,
       })
 
       fetchData(franchisee.id)
@@ -289,7 +257,7 @@ export default function FranchiseDashboard() {
         <div className="flex items-center justify-between px-6 py-4">
           <div>
             <h1 className="text-2xl font-bold font-montserrat">Thynkcity Franchise Portal</h1>
-            <p className="text-sm text-muted-foreground">Welcome back, {franchisee?.owner_name}</p>
+            <p className="text-sm text-muted-foreground">Welcome back, {franchisee?.full_name}</p>
           </div>
           <Button variant="outline" onClick={handleLogout}>
             <LogOut className="h-4 w-4 mr-2" />
@@ -324,7 +292,7 @@ export default function FranchiseDashboard() {
               onClick={() => setActiveTab("proposals")}
             >
               <FileText className="h-4 w-4 mr-2" />
-              Proposals
+              Documents
             </Button>
             <Button
               variant={activeTab === "discounts" ? "default" : "ghost"}
@@ -339,7 +307,7 @@ export default function FranchiseDashboard() {
               className="w-full justify-start"
               onClick={() => setActiveTab("profile")}
             >
-              <Building2 className="h-4 w-4 mr-2" />
+              <User className="h-4 w-4 mr-2" />
               Profile
             </Button>
           </nav>
@@ -368,7 +336,7 @@ export default function FranchiseDashboard() {
 
                 <Card className="hover-lift smooth-transition">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Proposals Sent</CardTitle>
+                    <CardTitle className="text-sm font-medium">Documents Created</CardTitle>
                     <FileText className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
@@ -407,40 +375,54 @@ export default function FranchiseDashboard() {
                   <CardDescription>Your latest school interactions</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>School Name</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Value</TableHead>
-                        <TableHead>Last Contact</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {schools.slice(0, 5).map((school) => (
-                        <TableRow key={school.id}>
-                          <TableCell className="font-medium">{school.name}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                school.status === "closed_won"
-                                  ? "default"
-                                  : school.status === "closed_lost"
-                                    ? "destructive"
-                                    : school.status === "negotiating"
-                                      ? "secondary"
-                                      : "outline"
-                              }
-                            >
-                              {school.status.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>₦{school.estimated_value.toLocaleString()}</TableCell>
-                          <TableCell>{new Date(school.last_contact).toLocaleDateString()}</TableCell>
+                  {schools.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>School Name</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Value</TableHead>
+                          <TableHead>Last Contact</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {schools.slice(0, 5).map((school) => (
+                          <TableRow key={school.id}>
+                            <TableCell className="font-medium">{school.name}</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  school.status === "closed_won"
+                                    ? "default"
+                                    : school.status === "closed_lost"
+                                      ? "destructive"
+                                      : school.status === "negotiating"
+                                        ? "secondary"
+                                        : "outline"
+                                }
+                              >
+                                {school.status?.replace("_", " ") || "lead"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>₦{(school.estimated_value || 0).toLocaleString()}</TableCell>
+                            <TableCell>
+                              {new Date(school.last_contact || school.created_at).toLocaleDateString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        No schools added yet. Start by adding your first school lead!
+                      </p>
+                      <Button className="mt-4" onClick={() => setActiveTab("schools")}>
+                        Add Your First School
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -465,57 +447,130 @@ export default function FranchiseDashboard() {
                   <CardDescription>Track and manage your school relationships</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>School Name</TableHead>
-                        <TableHead>Contact Person</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Estimated Value</TableHead>
-                        <TableHead>Last Contact</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {schools.map((school) => (
-                        <TableRow key={school.id}>
-                          <TableCell className="font-medium">{school.name}</TableCell>
-                          <TableCell>{school.contact_person}</TableCell>
-                          <TableCell>
-                            <Select
-                              value={school.status}
-                              onValueChange={(value) => updateSchoolStatus(school.id, value)}
-                            >
-                              <SelectTrigger className="w-32">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="lead">Lead</SelectItem>
-                                <SelectItem value="contacted">Contacted</SelectItem>
-                                <SelectItem value="proposal_sent">Proposal Sent</SelectItem>
-                                <SelectItem value="negotiating">Negotiating</SelectItem>
-                                <SelectItem value="closed_won">Closed Won</SelectItem>
-                                <SelectItem value="closed_lost">Closed Lost</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>₦{school.estimated_value.toLocaleString()}</TableCell>
-                          <TableCell>{new Date(school.last_contact).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => generateProposal(school.id, "detailed")}
-                              >
-                                Generate Proposal
-                              </Button>
-                            </div>
-                          </TableCell>
+                  {schools.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>School Name</TableHead>
+                          <TableHead>Contact Person</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Estimated Value</TableHead>
+                          <TableHead>Last Contact</TableHead>
+                          <TableHead>Actions</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {schools.map((school) => (
+                          <TableRow key={school.id}>
+                            <TableCell className="font-medium">{school.name}</TableCell>
+                            <TableCell>{school.contact_person}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={school.status || "lead"}
+                                onValueChange={(value) => updateSchoolStatus(school.id, value)}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="lead">Lead</SelectItem>
+                                  <SelectItem value="contacted">Contacted</SelectItem>
+                                  <SelectItem value="proposal_sent">Proposal Sent</SelectItem>
+                                  <SelectItem value="negotiating">Negotiating</SelectItem>
+                                  <SelectItem value="closed_won">Closed Won</SelectItem>
+                                  <SelectItem value="closed_lost">Closed Lost</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>₦{(school.estimated_value || 0).toLocaleString()}</TableCell>
+                            <TableCell>
+                              {new Date(school.last_contact || school.created_at).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => generateProposal(school.id, "detailed")}
+                                >
+                                  Generate Proposal
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        No schools added yet. Add your first school to get started!
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {activeTab === "profile" && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold font-montserrat mb-2">Franchise Profile</h2>
+                <p className="text-muted-foreground">Your franchise information and settings</p>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Profile Information</CardTitle>
+                  <CardDescription>Your franchise details</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Full Name</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{franchisee?.full_name}</p>
+                    </div>
+                    <div>
+                      <Label>Email</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{franchisee?.email}</p>
+                    </div>
+                    <div>
+                      <Label>Phone Number</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{franchisee?.phone_number}</p>
+                    </div>
+                    <div>
+                      <Label>Country</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{franchisee?.country}</p>
+                    </div>
+                    <div>
+                      <Label>State/City</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{franchisee?.state_city}</p>
+                    </div>
+                    <div>
+                      <Label>Territory</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{franchisee?.territory}</p>
+                    </div>
+                    <div>
+                      <Label>Status</Label>
+                      <Badge className="mt-1" variant={franchisee?.status === "active" ? "default" : "secondary"}>
+                        {franchisee?.status}
+                      </Badge>
+                    </div>
+                    <div>
+                      <Label>Joined</Label>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {new Date(franchisee?.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  {franchisee?.statement && (
+                    <div>
+                      <Label>Business Statement</Label>
+                      <p className="text-sm text-muted-foreground mt-1">{franchisee.statement}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -544,7 +599,7 @@ export default function FranchiseDashboard() {
                     email: formData.get("email"),
                     phone: formData.get("phone"),
                     address: formData.get("address"),
-                    estimated_value: Number(formData.get("estimated_value")),
+                    estimated_value: Number(formData.get("estimated_value")) || 0,
                     notes: formData.get("notes"),
                     last_contact: new Date().toISOString(),
                   })
@@ -573,7 +628,7 @@ export default function FranchiseDashboard() {
                   </div>
                   <div>
                     <Label htmlFor="estimated_value">Estimated Value (₦)</Label>
-                    <Input id="estimated_value" name="estimated_value" type="number" required />
+                    <Input id="estimated_value" name="estimated_value" type="number" />
                   </div>
                   <div>
                     <Label htmlFor="notes">Notes</Label>

@@ -262,33 +262,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
       if (error) throw error
 
-      if (action === "approve") {
-        // Get franchisee details for email
-        const { data: franchisee } = await supabase
-          .from("franchisee_profiles")
-          .select("email, full_name")
-          .eq("id", franchiseeId)
-          .single()
-
-        if (franchisee) {
-          try {
-            await fetch("/api/franchise/send-verification", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                email: franchisee.email,
-                franchiseeId: franchiseeId,
-                franchiseeName: franchisee.full_name,
-              }),
-            })
-          } catch (emailError) {
-            console.error("Failed to send verification email:", emailError)
-            // Don't fail the approval if email fails
-          }
-        }
-      }
-
-      // Log activity
+      // Just log the activity
       await supabase.from("franchise_activity_log").insert({
         franchisee_id: franchiseeId,
         activity_type: "status_change",
