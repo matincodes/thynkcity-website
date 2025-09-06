@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { supabase } from "@/lib/supabase"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -8,23 +8,9 @@ export async function POST(request: NextRequest) {
   try {
     console.log("[v0] Starting franchise profile creation")
 
-    const { userId, fullName, email, phoneNumber, country, stateCity, territory, statement } = await request.json()
+    const { userId, fullName, phoneNumber, country, stateCity, proposedTerritory, businessExperience, email } =
+      await request.json()
 
-    if (!userId || !fullName || !email || !phoneNumber || !country || !stateCity || !territory || !statement) {
-      console.log("[v0] Missing required fields")
-      return NextResponse.json({ error: "All fields are required" }, { status: 400 })
-    }
-
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
-
-    console.log("[v0] Checking for duplicate email")
-
-    // Check for duplicate email
     const { data: existingProfile } = await supabase
       .from("franchisee_profiles")
       .select("id")
@@ -32,180 +18,111 @@ export async function POST(request: NextRequest) {
       .single()
 
     if (existingProfile) {
-      console.log("[v0] Duplicate email found")
-      return NextResponse.json({ error: "A franchisee application with this email already exists" }, { status: 409 })
+      console.log("[v0] Duplicate email found:", email)
+      return NextResponse.json({ error: "Email already registered as franchisee" }, { status: 400 })
     }
 
-    console.log("[v0] Creating franchisee profile")
+    const verificationToken = crypto.randomUUID()
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
-    // Create franchisee profile
+    console.log("[v0] Creating franchisee profile with verification token")
+
     const { data: profile, error: profileError } = await supabase
       .from("franchisee_profiles")
       .insert({
         user_id: userId,
         full_name: fullName,
-        email: email,
         phone_number: phoneNumber,
-        country: country,
+        email: email,
+        country,
         state_city: stateCity,
-        territory: territory,
-        statement: statement,
+        proposed_territory: proposedTerritory,
+        business_experience: businessExperience,
         status: "pending",
+        verification_token: verificationToken,
+        verification_expires_at: expiresAt.toISOString(),
       })
       .select()
       .single()
 
     if (profileError) {
-      console.error("[v0] Profile creation error:", profileError)
+      console.error("[v0] Error creating franchise profile:", profileError)
       return NextResponse.json({ error: "Database error: " + profileError.message }, { status: 500 })
     }
 
-    console.log("[v0] Profile created successfully:", profile.id)
+    console.log("[v0] Profile created successfully, sending verification email")
 
-    // Generate verification token
-    const verificationToken = crypto.randomUUID()
-    const expiresAt = new Date()
-    expiresAt.setHours(expiresAt.getHours() + 24) // 24 hours expiry
-
-    console.log("[v0] Creating verification record")
-
-    // Create verification record
-    const { error: verificationError } = await supabase.from("franchisee_verifications").insert({
-      franchisee_id: profile.id,
-      email: email,
-      token: verificationToken,
-      expires_at: expiresAt.toISOString(),
-      verified: false,
-    })
-
-    if (verificationError) {
-      console.error("[v0] Verification record creation error:", verificationError)
-      return NextResponse.json({ error: "Failed to create verification record" }, { status: 500 })
-    }
-
-    console.log("[v0] Sending verification email")
-
-    // Send verification email
     const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/franchise/verify-email?token=${verificationToken}`
 
     try {
       const { data: emailData, error: emailError } = await resend.emails.send({
         from: "ThynkCity <noreply@thynkcity.com>",
         to: [email],
-        subject: "Welcome to ThynkCity Franchise Program - Verify Your Application",
+        subject: "Welcome to ThynkCity Franchise Program - Verify Your Account",
         html: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Welcome to ThynkCity Franchise Program</title>
-            </head>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to ThynkCity!</h1>
-                <p style="color: #f0f0f0; margin: 10px 0 0 0; font-size: 16px;">Franchise Partnership Program</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #1a365d; margin-bottom: 10px;">Welcome to ThynkCity!</h1>
+              <p style="color: #4a5568; font-size: 18px;">Thank you for your Application to Partner with ThynkCity</p>
+            </div>
+            
+            <div style="background-color: #f7fafc; padding: 25px; border-radius: 8px; margin-bottom: 25px;">
+              <h2 style="color: #2d3748; margin-bottom: 15px;">Verify Your Account</h2>
+              <p style="color: #4a5568; margin-bottom: 20px;">
+                We're excited to have you join our franchise network! Please verify your email address to activate your account and access your franchise dashboard.
+              </p>
+              <div style="text-align: center; margin: 25px 0;">
+                <a href="${verificationUrl}" style="background-color: #3182ce; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  Verify Email Address
+                </a>
               </div>
-              
-              <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px;">
-                <h2 style="color: #333; margin-top: 0;">Thank you for your Application to Partner with ThynkCity</h2>
-                
-                <p>Dear ${fullName},</p>
-                
-                <p>We're excited to receive your application to become a ThynkCity franchisee! Your interest in bringing quality tech education to ${territory}, ${stateCity} is exactly what we're looking for.</p>
-                
-                <div style="background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #667eea;">
-                  <h3 style="margin-top: 0; color: #667eea;">Next Steps:</h3>
-                  <ol style="padding-left: 20px;">
-                    <li><strong>Verify your email</strong> by clicking the button below</li>
-                    <li><strong>Application Review</strong> - Our team will review your application within 3-5 business days</li>
-                    <li><strong>Interview Process</strong> - Qualified candidates will be invited for a virtual interview</li>
-                    <li><strong>Franchise Agreement</strong> - Successful applicants will receive franchise documentation</li>
-                  </ol>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${verificationUrl}" style="background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Verify Your Email Address</a>
-                </div>
-                
-                <div style="background: #e8f4f8; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3 style="margin-top: 0; color: #2c5aa0;">What You'll Get Access To:</h3>
-                  <ul style="padding-left: 20px;">
-                    <li><strong>Franchise Dashboard</strong> - Manage your territory and track performance</li>
-                    <li><strong>School CRM System</strong> - Lead management and pipeline tracking</li>
-                    <li><strong>Document Generator</strong> - Professional proposals and contracts</li>
-                    <li><strong>Training Materials</strong> - Comprehensive franchise training program</li>
-                    <li><strong>Marketing Support</strong> - Branded materials and marketing guidance</li>
-                    <li><strong>Ongoing Support</strong> - Dedicated franchise support team</li>
-                  </ul>
-                </div>
-                
-                <p><strong>Application Details:</strong></p>
-                <ul style="background: white; padding: 15px; border-radius: 5px; list-style: none;">
-                  <li><strong>Territory:</strong> ${territory}</li>
-                  <li><strong>Location:</strong> ${stateCity}, ${country}</li>
-                  <li><strong>Contact:</strong> ${phoneNumber}</li>
-                </ul>
-                
-                <p>If you have any questions about the franchise program or need assistance, please don't hesitate to contact our franchise team at <a href="mailto:franchise@thynkcity.com">franchise@thynkcity.com</a>.</p>
-                
-                <p>We look forward to potentially welcoming you to the ThynkCity family!</p>
-                
-                <p style="margin-top: 30px;">
-                  Best regards,<br>
-                  <strong>The ThynkCity Franchise Team</strong><br>
-                  <a href="https://thynkcity.com">thynkcity.com</a>
-                </p>
-                
-                <hr style="border: none; border-top: 1px solid #ddd; margin: 30px 0;">
-                <p style="font-size: 12px; color: #666; text-align: center;">
-                  This verification link will expire in 24 hours. If you didn't apply for a ThynkCity franchise, please ignore this email.
-                </p>
-              </div>
-            </body>
-          </html>
+              <p style="color: #718096; font-size: 14px;">
+                This verification link will expire in 24 hours. If you didn't request this, please ignore this email.
+              </p>
+            </div>
+
+            <div style="border-left: 4px solid #3182ce; padding-left: 20px; margin-bottom: 25px;">
+              <h3 style="color: #2d3748; margin-bottom: 10px;">What's Next?</h3>
+              <p style="color: #4a5568; margin-bottom: 10px;">Once verified, you'll have access to:</p>
+              <ul style="color: #4a5568; margin-left: 20px;">
+                <li>School CRM and lead management system</li>
+                <li>Professional proposal and contract generators</li>
+                <li>Marketing materials and branding resources</li>
+                <li>Training modules and support documentation</li>
+                <li>Direct communication with our support team</li>
+              </ul>
+            </div>
+
+            <div style="text-align: center; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+              <p style="color: #718096; font-size: 14px;">
+                Need help? Contact us at <a href="mailto:franchise@thynkcity.com" style="color: #3182ce;">franchise@thynkcity.com</a>
+              </p>
+              <p style="color: #718096; font-size: 12px; margin-top: 10px;">
+                © 2024 ThynkCity. All rights reserved.
+              </p>
+            </div>
+          </div>
         `,
       })
 
       if (emailError) {
-        console.error("[v0] Email sending error:", emailError)
-        return NextResponse.json({
-          success: true,
-          message: "Profile created successfully, but verification email failed to send. Please contact support.",
-          profileId: profile.id,
-        })
+        console.error("[v0] Error sending verification email:", emailError)
+        // Don't fail the request if email fails, just log it
+      } else {
+        console.log("[v0] Verification email sent successfully:", emailData?.id)
       }
-
-      console.log("[v0] Verification email sent successfully:", emailData?.id)
-
-      // Log activity
-      await supabase.from("franchise_activity_log").insert({
-        franchisee_id: profile.id,
-        action: "application_submitted",
-        details: {
-          email: email,
-          territory: territory,
-          verification_email_sent: true,
-        },
-      })
-
-      console.log("[v0] Franchise profile creation completed successfully")
-
-      return NextResponse.json({
-        success: true,
-        message: "Franchise application submitted successfully! Please check your email for verification instructions.",
-        profileId: profile.id,
-      })
     } catch (emailError) {
-      console.error("[v0] Email service error:", emailError)
-      return NextResponse.json({
-        success: true,
-        message: "Profile created successfully, but verification email failed to send. Please contact support.",
-        profileId: profile.id,
-      })
+      console.error("[v0] Unexpected error sending email:", emailError)
     }
+
+    console.log("[v0] Profile creation completed successfully")
+    return NextResponse.json({
+      message: "Profile created successfully",
+      profileId: profile.id,
+      verificationEmailSent: true,
+    })
   } catch (error) {
-    console.error("[v0] Unexpected error in franchise profile creation:", error)
+    console.error("[v0] Unexpected error in profile creation:", error)
     return NextResponse.json({ error: "Internal server error: " + (error as Error).message }, { status: 500 })
   }
 }
