@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/verify-email?error=no-token", request.url))
     }
 
-    const supabase = createServiceRoleClient()
+    const supabase = await createServiceRoleClient()
 
     // Find verification record
     const { data: verification, error: verificationError } = await supabase
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[v0] Creating service role client")
-    const supabase = createServiceRoleClient()
+    const supabase = await createServiceRoleClient()
 
     // Find verification record
     console.log("[v0] Querying admin_verifications for token:", token)
