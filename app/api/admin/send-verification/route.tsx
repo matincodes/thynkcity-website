@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 import { Resend } from "resend"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -8,20 +8,29 @@ export async function POST(request: NextRequest) {
   try {
     const { email, userId } = await request.json()
 
+    console.log("[v0] Send verification request:", { email, userId })
+
     if (!email || !userId) {
       return NextResponse.json({ error: "Email and userId are required" }, { status: 400 })
     }
 
     if (!process.env.RESEND_API_KEY) {
-      console.error("RESEND_API_KEY is not configured")
+      console.error("[v0] RESEND_API_KEY is not configured")
       return NextResponse.json({ error: "Email service not configured" }, { status: 500 })
     }
 
-    const supabase = await createServerClient()
+    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
 
     // Generate verification token
     const token = crypto.randomUUID()
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+
+    console.log("[v0] Creating verification record:", { userId, email, token })
 
     // Store verification token
     const { error: insertError } = await supabase.from("admin_verifications").insert({
@@ -32,11 +41,13 @@ export async function POST(request: NextRequest) {
     })
 
     if (insertError) {
-      console.error("Database insert error:", insertError)
+      console.error("[v0] Database insert error:", insertError)
       return NextResponse.json({ error: "Failed to create verification record" }, { status: 500 })
     }
 
     const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/admin/verify-email?token=${token}`
+
+    console.log("[v0] Sending verification email to:", email)
 
     const { data, error } = await resend.emails.send({
       from: "Thynkcity Admin <admin@thynkcity.com>",
@@ -52,7 +63,7 @@ export async function POST(request: NextRequest) {
           </head>
           <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
             <div style="text-align: center; margin-bottom: 30px;">
-              <img src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Thynkcity%20Main%20Logo-bcVE5HyamWS9SeUWcwQGUVGHkpQKQn.png" alt="Thynkcity" style="height: 50px;">
+              <img src="/images/thynkcity-20main-20logo.png" alt="Thynkcity" style="height: 50px;">
             </div>
             
             <div style="background: #f8f9fa; padding: 30px; border-radius: 10px; border-left: 4px solid #AE752C;">
@@ -79,7 +90,7 @@ export async function POST(request: NextRequest) {
               </p>
               
               <div style="text-align: center; margin-top: 30px; font-size: 12px; color: #999;">
-                <p>© 2024 Thynkcity. All rights reserved.</p>
+                <p>© 2026 Thynkcity. All rights reserved.</p>
                 <p>10 Adeniji Street, Oregun, Ikeja, Lagos</p>
               </div>
             </div>
@@ -89,14 +100,14 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) {
-      console.error("Resend error:", error)
+      console.error("[v0] Resend error:", error)
       return NextResponse.json({ error: "Failed to send verification email" }, { status: 500 })
     }
 
-    console.log("Verification email sent successfully:", data)
+    console.log("[v0] Verification email sent successfully:", data)
     return NextResponse.json({ message: "Verification email sent successfully" })
   } catch (error) {
-    console.error("Send verification error:", error)
+    console.error("[v0] Send verification error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
