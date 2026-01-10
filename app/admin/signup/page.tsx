@@ -56,7 +56,6 @@ export default function AdminSignUpPage() {
           emailRedirectTo: `${window.location.origin}/admin/dashboard`,
           data: {
             role: "admin",
-            email_verified: false,
           },
         },
       })
@@ -72,32 +71,9 @@ export default function AdminSignUpPage() {
 
       console.log("[v0] User created successfully:", data.user.id)
 
-      console.log("[v0] Sending verification email for user:", data.user.id)
-
-      const response = await fetch("/api/admin/send-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          userId: data.user.id,
-        }),
-      })
-
-      const responseData = await response.json()
-      console.log("[v0] Verification email response:", responseData)
-
-      if (!response.ok) {
-        throw new Error(responseData.error || "Failed to send verification email")
-      }
-
       setSuccess(
-        "Admin account created! Please check your email and click the verification link to activate your account.",
+        "Admin account created! Please check your email for a confirmation link from Supabase to activate your account.",
       )
-      setTimeout(() => {
-        router.push("/admin/login")
-      }, 3000)
     } catch (error: unknown) {
       console.error("[v0] Signup error:", error)
       setError(error instanceof Error ? error.message : "An error occurred")
