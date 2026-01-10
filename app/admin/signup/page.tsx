@@ -47,15 +47,32 @@ export default function AdminSignUpPage() {
         throw new Error("Password must be at least 6 characters long")
       }
 
+      console.log("[v0] Starting admin signup for:", email)
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/admin/verify-email`,
+          emailRedirectTo: `${window.location.origin}/admin/dashboard`,
+          data: {
+            role: "admin",
+            email_verified: false,
+          },
         },
       })
 
-      if (error) throw error
+      if (error) {
+        console.error("[v0] Signup error:", error)
+        throw error
+      }
+
+      if (!data.user) {
+        throw new Error("User creation failed")
+      }
+
+      console.log("[v0] User created successfully:", data.user.id)
+
+      console.log("[v0] Sending verification email for user:", data.user.id)
 
       const response = await fetch("/api/admin/send-verification", {
         method: "POST",
@@ -64,12 +81,15 @@ export default function AdminSignUpPage() {
         },
         body: JSON.stringify({
           email,
-          userId: data.user?.id,
+          userId: data.user.id,
         }),
       })
 
+      const responseData = await response.json()
+      console.log("[v0] Verification email response:", responseData)
+
       if (!response.ok) {
-        throw new Error("Failed to send verification email")
+        throw new Error(responseData.error || "Failed to send verification email")
       }
 
       setSuccess(
@@ -79,6 +99,7 @@ export default function AdminSignUpPage() {
         router.push("/admin/login")
       }, 3000)
     } catch (error: unknown) {
+      console.error("[v0] Signup error:", error)
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
       setIsLoading(false)

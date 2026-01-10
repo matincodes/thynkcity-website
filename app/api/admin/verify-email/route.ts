@@ -33,7 +33,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/verify-email?error=expired", request.url))
     }
 
+    console.log("[v0] Checking if user exists:", verification.user_id)
+    const { data: existingUser, error: getUserError } = await supabase.auth.admin.getUserById(verification.user_id)
+
+    console.log("[v0] User lookup result:", existingUser)
+    console.log("[v0] User lookup error:", getUserError)
+
+    if (getUserError || !existingUser.user) {
+      console.error("[v0] User not found in auth system:", verification.user_id)
+      // Delete the orphaned verification record
+      await supabase.from("admin_verifications").delete().eq("token", token)
+      return NextResponse.redirect(new URL("/admin/verify-email?error=user-not-found", request.url))
+    }
+
     // Update user metadata to mark as verified admin
+    console.log("[v0] Updating user metadata for:", verification.user_id)
     const { error: updateError } = await supabase.auth.admin.updateUserById(verification.user_id, {
       user_metadata: {
         role: "admin",
@@ -45,14 +59,14 @@ export async function GET(request: NextRequest) {
     console.log("[v0] User update error:", updateError)
 
     if (updateError) {
-      console.error("Failed to update user:", updateError)
+      console.error("[v0] Failed to update user:", updateError)
       return NextResponse.redirect(new URL("/admin/verify-email?error=update-failed", request.url))
     }
 
     // Delete verification record
     await supabase.from("admin_verifications").delete().eq("token", token)
 
-    console.log("[v0] Verification successful, redirecting to login")
+    console.log("[v0] Verification successful, redirecting to success page")
 
     return NextResponse.redirect(new URL("/admin/verify-email?success=true", request.url))
   } catch (error) {
@@ -102,6 +116,19 @@ export async function POST(request: NextRequest) {
     if (expiresAt < now) {
       console.log("[v0] Token has expired")
       return NextResponse.json({ error: "Verification token has expired" }, { status: 400 })
+    }
+
+    console.log("[v0] Checking if user exists:", verification.user_id)
+    const { data: existingUser, error: getUserError } = await supabase.auth.admin.getUserById(verification.user_id)
+
+    console.log("[v0] User lookup result:", existingUser)
+    console.log("[v0] User lookup error:", getUserError)
+
+    if (getUserError || !existingUser.user) {
+      console.error("[v0] User not found in auth system:", verification.user_id)
+      // Delete the orphaned verification record
+      await supabase.from("admin_verifications").delete().eq("token", token)
+      return NextResponse.json({ error: "User not found" }, { status: 404 })
     }
 
     // Update user metadata to mark as verified admin
