@@ -63,47 +63,80 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { token } = await request.json()
+    console.log("[v0] POST verify-email request received")
+
+    const body = await request.json()
+    console.log("[v0] Request body:", body)
+
+    const { token } = body
 
     if (!token) {
+      console.log("[v0] No token provided")
       return NextResponse.json({ error: "Verification token is required" }, { status: 400 })
     }
 
+    console.log("[v0] Creating service role client")
     const supabase = createServiceRoleClient()
 
     // Find verification record
+    console.log("[v0] Querying admin_verifications for token:", token)
     const { data: verification, error: verificationError } = await supabase
       .from("admin_verifications")
       .select("*")
       .eq("token", token)
       .single()
 
+    console.log("[v0] Verification record:", verification)
+    console.log("[v0] Verification error:", verificationError)
+
     if (verificationError || !verification) {
+      console.log("[v0] Invalid verification token")
       return NextResponse.json({ error: "Invalid verification token" }, { status: 400 })
     }
 
     // Check if token has expired
-    if (new Date(verification.expires_at) < new Date()) {
+    const expiresAt = new Date(verification.expires_at)
+    const now = new Date()
+    console.log("[v0] Token expires at:", expiresAt, "Current time:", now)
+
+    if (expiresAt < now) {
+      console.log("[v0] Token has expired")
       return NextResponse.json({ error: "Verification token has expired" }, { status: 400 })
     }
 
-    // Update user profile to admin role
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ role: "admin" })
-      .eq("id", verification.user_id)
+    // Update user metadata to mark as verified admin
+    console.log("[v0] Updating user metadata for user:", verification.user_id)
+    const { data: updatedUser, error: updateError } = await supabase.auth.admin.updateUserById(verification.user_id, {
+      user_metadata: {
+        role: "admin",
+        email_verified: true,
+        verified_at: new Date().toISOString(),
+      },
+    })
 
-    if (profileError) {
-      console.error("Profile update error:", profileError)
-      return NextResponse.json({ error: "Failed to update user role" }, { status: 500 })
+    console.log("[v0] User update result:", updatedUser)
+    console.log("[v0] User update error:", updateError)
+
+    if (updateError) {
+      console.error("[v0] Failed to update user metadata:", updateError)
+      return NextResponse.json({ error: "Failed to verify email", details: updateError.message }, { status: 500 })
     }
 
     // Delete verification record
-    await supabase.from("admin_verifications").delete().eq("token", token)
+    console.log("[v0] Deleting verification record")
+    const { error: deleteError } = await supabase.from("admin_verifications").delete().eq("token", token)
 
+    if (deleteError) {
+      console.error("[v0] Failed to delete verification record:", deleteError)
+    }
+
+    console.log("[v0] Email verification completed successfully")
     return NextResponse.json({ message: "Email verified successfully" })
   } catch (error) {
-    console.error("Email verification error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    console.error("[v0] Email verification error:", error)
+    return NextResponse.json(
+      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    )
   }
 }
