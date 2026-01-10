@@ -24,6 +24,7 @@ import {
   Building2,
   DollarSign,
   FileText,
+  UserCheck,
 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
 import type { Testimonial, BlogPost, GalleryImage, PortfolioItem, Course } from "@/lib/supabase/queries"
@@ -89,6 +90,18 @@ interface FranchiseActivity {
   created_at: string
 }
 
+interface StaffProfile {
+  id: string
+  user_id: string
+  full_name: string
+  email: string
+  phone_number: string
+  specialization: string
+  bio?: string
+  approved: boolean
+  created_at: string
+}
+
 export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [activeTab, setActiveTab] = useState("overview")
   const [loading, setLoading] = useState(true)
@@ -101,6 +114,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [franchisees, setFranchisees] = useState<Franchisee[]>([])
   const [discountRequests, setDiscountRequests] = useState<DiscountRequest[]>([])
   const [franchiseActivities, setFranchiseActivities] = useState<FranchiseActivity[]>([])
+  const [staffProfiles, setStaffProfiles] = useState<StaffProfile[]>([])
 
   const [showAddModal, setShowAddModal] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
@@ -120,6 +134,9 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     activeFranchisees: 0,
     pendingDiscountRequests: 0,
     totalRevenue: 0,
+    totalStaff: 0,
+    pendingStaff: 0,
+    approvedStaff: 0,
   })
 
   const router = useRouter()
@@ -175,6 +192,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         franchiseesRes,
         discountRequestsRes,
         activitiesRes,
+        staffRes,
       ] = await Promise.all([
         supabase.from("testimonials").select("*").order("created_at", { ascending: false }),
         supabase.from("blog_posts").select("*").order("created_at", { ascending: false }),
@@ -198,6 +216,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         `)
           .order("created_at", { ascending: false })
           .limit(50),
+        supabase.from("staff_profiles").select("*").order("created_at", { ascending: false }),
       ])
 
       setTestimonials(testimonialsData || [])
@@ -215,6 +234,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       if (franchiseesRes.data) setFranchisees(franchiseesRes.data)
       if (discountRequestsRes.data) setDiscountRequests(discountRequestsRes.data)
       if (activitiesRes.data) setFranchiseActivities(activitiesRes.data)
+      if (staffRes.data) setStaffProfiles(staffRes.data)
 
       // Calculate stats
       const pendingTestimonials = testimonialsRes.data?.filter((t) => t.status === "pending").length || 0
@@ -224,6 +244,8 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
       const activeFranchisees = franchiseesRes.data?.filter((f) => f.status === "approved").length || 0
       const pendingDiscountRequests = discountRequestsRes.data?.filter((d) => d.status === "pending").length || 0
       const totalRevenue = franchiseesRes.data?.reduce((sum, f) => sum + (f.monthly_revenue || 0), 0) || 0
+      const pendingStaff = staffRes.data?.filter((s) => !s.approved).length || 0
+      const approvedStaff = staffRes.data?.filter((s) => s.approved).length || 0
 
       // Calculate stats
       setStats({
@@ -241,6 +263,9 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         activeFranchisees,
         pendingDiscountRequests,
         totalRevenue,
+        totalStaff: staffRes.data?.length || 0,
+        pendingStaff,
+        approvedStaff,
       })
     } catch (error) {
       console.error("Error fetching data:", error)
@@ -388,6 +413,26 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     }
   }
 
+  const handleStaffAction = async (staffId: string, action: "approve" | "reject") => {
+    try {
+      if (action === "approve") {
+        const { error } = await supabase.from("staff_profiles").update({ approved: true }).eq("id", staffId)
+
+        if (error) throw error
+      } else {
+        // For reject, we delete the staff profile and the auth account
+        const staff = staffProfiles.find((s) => s.id === staffId)
+        if (staff) {
+          await supabase.from("staff_profiles").delete().eq("id", staffId)
+        }
+      }
+
+      fetchData()
+    } catch (error) {
+      console.error(`Error ${action}ing staff:`, error)
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -523,6 +568,21 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
               {stats.pendingRegistrations > 0 && (
                 <Badge variant="destructive" className="ml-auto">
                   {stats.pendingRegistrations}
+                </Badge>
+              )}
+            </Button>
+
+            {/* Staff Management Tab */}
+            <Button
+              variant={activeTab === "staff" ? "default" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setActiveTab("staff")}
+            >
+              <UserCheck className="h-4 w-4 mr-2" />
+              Staff Management
+              {stats.pendingStaff > 0 && (
+                <Badge variant="destructive" className="ml-auto">
+                  {stats.pendingStaff}
                 </Badge>
               )}
             </Button>
@@ -1400,6 +1460,105 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
                                 Delete
                               </Button>
                             </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {/* Staff Management Tab Content */}
+          {activeTab === "staff" && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h2 className="text-2xl font-bold font-montserrat">Staff Management</h2>
+                  <p className="text-muted-foreground">Review and approve staff applications</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Total Staff</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{stats.totalStaff}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Pending Approval</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-600">{stats.pendingStaff}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm">Approved Staff</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">{stats.approvedStaff}</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Staff Applications</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
+                        <TableHead>Specialization</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Applied</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {staffProfiles.map((staff) => (
+                        <TableRow key={staff.id}>
+                          <TableCell className="font-medium">{staff.full_name}</TableCell>
+                          <TableCell>{staff.email}</TableCell>
+                          <TableCell>{staff.phone_number}</TableCell>
+                          <TableCell>{staff.specialization}</TableCell>
+                          <TableCell>
+                            <Badge variant={staff.approved ? "default" : "secondary"}>
+                              {staff.approved ? "Approved" : "Pending"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(staff.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell>
+                            {!staff.approved && (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => handleStaffAction(staff.id, "approve")}
+                                >
+                                  <Check className="h-4 w-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleStaffAction(staff.id, "reject")}
+                                >
+                                  <X className="h-4 w-4 mr-1" />
+                                  Reject
+                                </Button>
+                              </div>
+                            )}
+                            {staff.approved && <span className="text-sm text-muted-foreground">Active</span>}
                           </TableCell>
                         </TableRow>
                       ))}

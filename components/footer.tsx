@@ -12,7 +12,7 @@ export function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <Image
-              src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Thynkcity%20Main%20Logo-bcVE5HyamWS9SeUWcwQGUVGHkpQKQn.png"
+              src="/images/thynkcity-20main-20logo.png"
               alt="Thynkcity Logo"
               width={150}
               height={40}
@@ -185,6 +185,18 @@ export function Footer() {
                 className="text-secondary-foreground/60 hover:text-secondary-foreground transition-colors"
               >
                 Terms of Service
+              </Link>
+              <Link
+                href="/staff/login"
+                className="text-secondary-foreground/60 hover:text-secondary-foreground transition-colors"
+              >
+                Staff Portal
+              </Link>
+              <Link
+                href="/admin/login"
+                className="text-secondary-foreground/60 hover:text-secondary-foreground transition-colors"
+              >
+                Admin Portal
               </Link>
             </div>
           </div>
