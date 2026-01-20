@@ -17,7 +17,7 @@ interface StaffTabProps {
 
 export default function StaffTab({ staffProfiles, stats, handleStaffAction }: StaffTabProps) {
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold font-montserrat">Staff Management</h2>
@@ -114,7 +114,8 @@ export default function StaffTab({ staffProfiles, stats, handleStaffAction }: St
           <CardDescription>View approved staff members</CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -138,6 +139,7 @@ export default function StaffTab({ staffProfiles, stats, handleStaffAction }: St
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>
