@@ -1,71 +1,68 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
+import { sendVerificationEmail } from "@/lib/send-verification"
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("=== HIT ADMIN SIGNUP ROUTE ===")
+
     const body = await request.json()
     const { email, password } = body
 
-    // Validate required fields
     if (!email || !password) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 })
     }
 
-    // Check if email is @thynkcity.com
     if (!email.endsWith("@thynkcity.com")) {
-      return NextResponse.json({ error: "Only @thynkcity.com email addresses are allowed" }, { status: 400 })
+      return NextResponse.json({ error: "Only @thynkcity.com emails allowed" }, { status: 400 })
     }
 
-    // Create Supabase client with service role
-    const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    })
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
+    )
 
-    // Check for duplicate email
-    const { data: existingUser } = await supabase.auth.admin.getUserById(email) // Wait, better to check by email
-    // Actually, to check if user exists, but since creating, it will fail if exists.
-
-    // Create auth user without email confirmation
+    // 1. Create User (Blocked until verified)
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: false, // Do not confirm yet
-      user_metadata: {
-        role: "pending_admin", // Temporary role
-      },
+      email_confirm: false, // Don't send Supabase's default email
+      user_metadata: { role: "pending_admin" },
     })
 
     if (authError) {
-      console.error("[v0] Admin auth user creation error:", authError)
-      return NextResponse.json({ error: "Failed to create user account: " + authError.message }, { status: 500 })
+      // Handle "User already exists"
+      if (authError.status === 422 || authError.message.includes("already registered")) {
+         return NextResponse.json({ error: "User already exists" }, { status: 409 })
+      }
+      return NextResponse.json({ error: authError.message }, { status: 500 })
     }
 
     if (!authData.user) {
-      return NextResponse.json({ error: "Failed to create user account" }, { status: 500 })
+        return NextResponse.json({ error: "Failed to create user" }, { status: 500 })
     }
 
-    // Now send custom verification
-    const response = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/admin/send-verification`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: authData.user.email,
-        userId: authData.user.id
-      })
-    });
+    // 2. Call your helper function directly
+    // This runs on the server, so it's fast and secure.
+    try {
+        console.log("=== HIT ADMIN SIGNUP ROUTE ===")
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Failed to send verification email:", errorData);
-      // Still return success, as user is created, just email failed
+        await sendVerificationEmail(authData.user.email!, authData.user.id)
+    } catch (emailErr) {
+        console.error("User created, but email helper failed:", emailErr)
+        // Return 200 but with a warning, or 500 depending on your preference
+        return NextResponse.json({ 
+            success: true, 
+            user: authData.user,
+            warning: "Account created but email failed to send. Contact support."
+        })
     }
 
     return NextResponse.json({ success: true, user: authData.user })
+
   } catch (error: any) {
-    console.error("[v0] Admin signup error:", error)
-    return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
+    console.error("Signup error:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

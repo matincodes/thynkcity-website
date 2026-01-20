@@ -3,6 +3,8 @@ import { createServiceRoleClient } from "@/lib/supabase/server"
 
 export async function GET(request: NextRequest) {
   try {
+    console.log("=== HIT VERIFY EMAIL ROUTE ===", request.method)
+
     const searchParams = request.nextUrl.searchParams
     const token = searchParams.get("token")
 
@@ -89,6 +91,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("=== HIT VERIFY EMAIL ROUTE ===", request.method)
+
     console.log("POST verify-email request received")
 
     const body = await request.json()
