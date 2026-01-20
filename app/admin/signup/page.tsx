@@ -3,7 +3,6 @@
 import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -49,41 +48,23 @@ export default function AdminSignUpPage() {
 
       console.log("Starting admin signup for:", email)
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/admin/dashboard`,
-          data: {
-            role: "admin",
-          },
-        },
-      })
-
-      if (error) {
-        console.error("Signup error:", error)
-        throw error
-      }
-
-      if (!data.user) {
-        throw new Error("User creation failed")
-      }
-
-      console.log("User created successfully:", data.user.id)
-
-      const response = await fetch('/api/admin/send-verification', {
+      const response = await fetch('/api/admin/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: data.user.email,
-          userId: data.user.id
+          email,
+          password,
         })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to send verification email");
+        throw new Error(errorData.error || "Failed to create admin account");
       }
+
+      const data = await response.json();
+
+      console.log("User created successfully:", data.user.id)
 
       setSuccess(
         "Admin account created! Please check your email for a confirmation link from Supabase to activate your account.",
@@ -223,3 +204,7 @@ export default function AdminSignUpPage() {
     </div>
   )
 }
+function createClient() {
+  throw new Error("Function not implemented.")
+}
+

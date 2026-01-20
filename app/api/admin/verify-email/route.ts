@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
     // Update user metadata to mark as verified admin
     console.log("Updating user metadata for:", verification.user_id)
     const { error: updateError } = await supabase.auth.admin.updateUserById(verification.user_id, {
+      email_confirm: true,
       user_metadata: {
         role: "admin",
         email_verified: true,
@@ -63,7 +64,17 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(new URL("/admin/verify-email?error=update-failed", request.url))
     }
 
-  
+    // Update the profiles table to set role to admin
+    const { error: profileUpdateError } = await supabase
+      .from("profiles")
+      .update({ role: "admin" })
+      .eq("id", verification.user_id)
+
+    if (profileUpdateError) {
+      console.error("Failed to update profile role:", profileUpdateError)
+      return NextResponse.redirect(new URL("/admin/verify-email?error=profile-update-failed", request.url))
+    }
+
     // Delete verification record
     await supabase.from("admin_verifications").delete().eq("token", token)
 

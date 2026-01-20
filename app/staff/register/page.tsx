@@ -4,7 +4,6 @@ import type React from "react"
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -33,31 +32,14 @@ export default function StaffRegisterPage() {
     setError("")
 
     try {
-      const supabase = createClient()
-
-      // Create auth account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/staff/dashboard`,
-        },
-      })
-
-      if (authError) throw authError
-
-      if (!authData.user) {
-        throw new Error("Failed to create user account")
-      }
-
-      // Create staff profile via API
+      // Create staff profile and auth account via API
       const response = await fetch("/api/staff/create-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: authData.user.id,
           fullName: formData.fullName,
           email: formData.email,
+          password: formData.password,
           phoneNumber: formData.phoneNumber,
           specialization: formData.specialization,
           bio: formData.bio,

@@ -4,10 +4,10 @@ import { createClient } from "@supabase/supabase-js"
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { userId, fullName, email, phoneNumber, specialization, bio } = body
+    const { fullName, email, password, phoneNumber, specialization, bio } = body
 
     // Validate required fields
-    if (!userId || !fullName || !email || !phoneNumber || !specialization) {
+    if (!fullName || !email || !password || !phoneNumber || !specialization) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
     }
 
@@ -26,11 +26,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "A staff profile with this email already exists" }, { status: 409 })
     }
 
+    // Create auth user without email verification
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm the email
+      user_metadata: {
+        full_name: fullName,
+      },
+    })
+
+    if (authError) {
+      console.error("[v0] Auth user creation error:", authError)
+      return NextResponse.json({ error: "Failed to create user account: " + authError.message }, { status: 500 })
+    }
+
+    if (!authData.user) {
+      return NextResponse.json({ error: "Failed to create user account" }, { status: 500 })
+    }
+
     // Create staff profile
     const { data: profile, error: profileError } = await supabase
       .from("staff_profiles")
       .insert({
-        user_id: userId,
+        user_id: authData.user.id,
         full_name: fullName,
         email,
         phone_number: phoneNumber,
@@ -46,7 +65,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Failed to create staff profile: " + profileError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, profile })
+    return NextResponse.json({ success: true, profile, user: authData.user })
   } catch (error: any) {
     console.error("[v0] Staff profile creation error:", error)
     return NextResponse.json({ error: error.message || "Internal server error" }, { status: 500 })
