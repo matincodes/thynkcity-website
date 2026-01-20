@@ -28,7 +28,6 @@ export default function AdminSignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
-    const supabase = createClient()
     setIsLoading(true)
     setError(null)
     setSuccess(null)
@@ -67,7 +66,7 @@ export default function AdminSignUpPage() {
       console.log("User created successfully:", data.user.id)
 
       setSuccess(
-        "Admin account created! Please check your email for a confirmation link from Supabase to activate your account.",
+        "Admin account created! Please check your email for the verification link to activate your account.",
       )
     } catch (error: unknown) {
       console.error("Signup error:", error)
@@ -204,7 +203,5 @@ export default function AdminSignUpPage() {
     </div>
   )
 }
-function createClient() {
-  throw new Error("Function not implemented.")
-}
+
 
