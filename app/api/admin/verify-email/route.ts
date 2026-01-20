@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
     console.log("User lookup error:", getUserError)
 
     if (getUserError || !existingUser.user) {
-      console.error("[v0] User not found in auth system:", verification.user_id)
+      console.error("User not found in auth system:", verification.user_id)
       // Delete the orphaned verification record
       await supabase.from("admin_verifications").delete().eq("token", token)
       return NextResponse.json({ error: "User not found" }, { status: 404 })
