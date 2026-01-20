@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
       company: testimonialData.company || null,
       content: testimonialData.content,
       rating: Number.parseInt(testimonialData.rating),
-      image_url: null, // Will be added later when image upload is implemented
+      image_url: undefined, // Will be added later when image upload is implemented
     })
 
     return NextResponse.json({

@@ -1,10 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase/server"
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createServerClient()
     const body = await request.json()
+    const { id } = await params
 
     const validFields = ["title", "slug", "excerpt", "content", "featured_image", "category", "tags", "status"]
     const updateData: any = {
@@ -25,7 +26,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     const { data: post, error } = await supabase
       .from("blog_posts")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single()
 
@@ -38,11 +39,12 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const supabase = await createServerClient()
+    const { id } = await params
 
-    const { error } = await supabase.from("blog_posts").delete().eq("id", params.id)
+    const { error } = await supabase.from("blog_posts").delete().eq("id", id)
 
     if (error) throw error
 

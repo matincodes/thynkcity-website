@@ -47,7 +47,7 @@ export default function AdminSignUpPage() {
         throw new Error("Password must be at least 6 characters long")
       }
 
-      console.log("[v0] Starting admin signup for:", email)
+      console.log("Starting admin signup for:", email)
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -61,7 +61,7 @@ export default function AdminSignUpPage() {
       })
 
       if (error) {
-        console.error("[v0] Signup error:", error)
+        console.error("Signup error:", error)
         throw error
       }
 
@@ -69,13 +69,27 @@ export default function AdminSignUpPage() {
         throw new Error("User creation failed")
       }
 
-      console.log("[v0] User created successfully:", data.user.id)
+      console.log("User created successfully:", data.user.id)
+
+      const response = await fetch('/api/admin/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: data.user.email,
+          userId: data.user.id
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to send verification email");
+      }
 
       setSuccess(
         "Admin account created! Please check your email for a confirmation link from Supabase to activate your account.",
       )
     } catch (error: unknown) {
-      console.error("[v0] Signup error:", error)
+      console.error("Signup error:", error)
       setError(error instanceof Error ? error.message : "An error occurred")
     } finally {
       setIsLoading(false)

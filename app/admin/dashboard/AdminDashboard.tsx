@@ -2,32 +2,21 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
-import {
-  BarChart3,
-  MessageSquare,
-  BookOpen,
-  ImageIcon,
-  Briefcase,
-  GraduationCap,
-  LogOut,
-  Check,
-  X,
-  Edit,
-  Plus,
-  Loader2,
-  Users,
-  Building2,
-  DollarSign,
-  FileText,
-  UserCheck,
-} from "lucide-react"
+import { Loader2 } from "lucide-react"
 import type { User } from "@supabase/supabase-js"
-import type { Testimonial, BlogPost, GalleryImage, PortfolioItem, Course } from "@/lib/supabase/queries"
+import type { Testimonial, BlogPost, GalleryImage, PortfolioItem, Course, Registration, StaffProfile } from "@/lib/supabase/queries"
+import AdminHeader from "./components/AdminHeader"
+import AdminSidebar from "./components/AdminSidebar"
+import OverviewTab from "./components/OverviewTab"
+import TestimonialsTab from "./components/TestimonialsTab"
+import BlogTab from "./components/BlogTab"
+import GalleryTab from "./components/GalleryTab"
+import PortfolioTab from "./components/PortfolioTab"
+import CoursesTab from "./components/CoursesTab"
+import RegistrationsTab from "./components/RegistrationsTab"
+import StaffTab from "./components/StaffTab"
 import BlogPostForm from "./forms/BlogPostForm"
 import CourseForm from "./forms/CourseForm"
 import ProjectForm from "./forms/ProjectForm"
@@ -35,71 +24,6 @@ import GalleryForm from "./forms/GalleryForm"
 
 interface AdminDashboardProps {
   user: User
-}
-
-interface Registration {
-  id: string
-  type: "individual" | "parent"
-  name: string
-  email: string
-  phone: string
-  age?: number
-  course_interest: string
-  children?: Array<{
-    name: string
-    age: number
-    course_interest: string
-  }>
-  status: "pending" | "contacted" | "enrolled" | "declined"
-  created_at: string
-}
-
-interface Franchisee {
-  id: string
-  full_name: string
-  email: string
-  phone_number: string
-  country: string
-  state_city: string
-  territory: string
-  statement: string
-  status: "pending" | "approved" | "rejected" | "suspended" | "active"
-  created_at: string
-  verified_at?: string
-  user_id: string
-}
-
-interface DiscountRequest {
-  id: string
-  franchisee_id: string
-  franchisee_name: string
-  school_name: string
-  original_amount: number
-  requested_discount: number
-  reason: string
-  status: "pending" | "approved" | "rejected"
-  created_at: string
-}
-
-interface FranchiseActivity {
-  id: string
-  franchisee_id: string
-  franchisee_name: string
-  activity_type: string
-  description: string
-  created_at: string
-}
-
-interface StaffProfile {
-  id: string
-  user_id: string
-  full_name: string
-  email: string
-  phone_number: string
-  specialization: string
-  bio?: string
-  approved: boolean
-  created_at: string
 }
 
 export default function AdminDashboard({ user }: AdminDashboardProps) {
@@ -111,9 +35,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItem[]>([])
   const [courses, setCourses] = useState<Course[]>([])
   const [registrations, setRegistrations] = useState<Registration[]>([])
-  const [franchisees, setFranchisees] = useState<Franchisee[]>([])
-  const [discountRequests, setDiscountRequests] = useState<DiscountRequest[]>([])
-  const [franchiseActivities, setFranchiseActivities] = useState<FranchiseActivity[]>([])
   const [staffProfiles, setStaffProfiles] = useState<StaffProfile[]>([])
 
   const [showAddModal, setShowAddModal] = useState(false)
@@ -129,11 +50,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     totalCourses: 0,
     totalRegistrations: 0,
     pendingRegistrations: 0,
-    totalFranchisees: 0,
-    pendingFranchisees: 0,
-    activeFranchisees: 0,
-    pendingDiscountRequests: 0,
-    totalRevenue: 0,
     totalStaff: 0,
     pendingStaff: 0,
     approvedStaff: 0,
@@ -150,38 +66,7 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     try {
       setLoading(true)
 
-      // Fetch testimonials
-      const { data: testimonialsData } = await supabase
-        .from("testimonials")
-        .select("*")
-        .order("created_at", { ascending: false })
-
-      // Fetch blog posts
-      const { data: blogPostsData } = await supabase
-        .from("blog_posts")
-        .select("*")
-        .order("created_at", { ascending: false })
-
-      // Fetch gallery images
-      const { data: galleryData } = await supabase
-        .from("gallery_images")
-        .select("*")
-        .order("created_at", { ascending: false })
-
-      // Fetch portfolio items
-      const { data: portfolioData } = await supabase
-        .from("portfolio_items")
-        .select("*")
-        .order("created_at", { ascending: false })
-
-      // Fetch courses
-      const { data: coursesData } = await supabase.from("courses").select("*").order("created_at", { ascending: false })
-
-      const { data: registrationsData } = await supabase
-        .from("registrations")
-        .select("*")
-        .order("created_at", { ascending: false })
-
+      // Fetch all data using API routes
       const [
         testimonialsRes,
         blogPostsRes,
@@ -189,81 +74,68 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         portfolioRes,
         coursesRes,
         registrationsRes,
-        franchiseesRes,
-        discountRequestsRes,
-        activitiesRes,
         staffRes,
       ] = await Promise.all([
-        supabase.from("testimonials").select("*").order("created_at", { ascending: false }),
-        supabase.from("blog_posts").select("*").order("created_at", { ascending: false }),
-        supabase.from("gallery_images").select("*").order("created_at", { ascending: false }),
-        supabase.from("portfolio_items").select("*").order("created_at", { ascending: false }),
-        supabase.from("courses").select("*").order("created_at", { ascending: false }),
-        supabase.from("registrations").select("*").order("created_at", { ascending: false }),
-        supabase.from("franchisee_profiles").select("*").order("created_at", { ascending: false }),
-        supabase
-          .from("discount_requests")
-          .select(`
-          *,
-          franchisee:franchisee_profiles(full_name)
-        `)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("franchise_activity_log")
-          .select(`
-          *,
-          franchisee:franchisee_profiles(full_name)
-        `)
-          .order("created_at", { ascending: false })
-          .limit(50),
-        supabase.from("staff_profiles").select("*").order("created_at", { ascending: false }),
+        fetch("/api/admin/testimonials"),
+        fetch("/api/admin/blog-posts"),
+        fetch("/api/admin/gallery"),
+        fetch("/api/admin/projects"),
+        fetch("/api/admin/courses"),
+        fetch("/api/admin/registrations"),
+        fetch("/api/admin/staff"),
       ])
 
-      setTestimonials(testimonialsData || [])
-      setBlogPosts(blogPostsData || [])
-      setGalleryImages(galleryData || [])
-      setPortfolioItems(portfolioData || [])
-      setCourses(coursesData || [])
-      setRegistrations(registrationsData || []) // Set registrations data
-      if (testimonialsRes.data) setTestimonials(testimonialsRes.data)
-      if (blogPostsRes.data) setBlogPosts(blogPostsRes.data)
-      if (galleryRes.data) setGalleryImages(galleryRes.data)
-      if (portfolioRes.data) setPortfolioItems(portfolioRes.data)
-      if (coursesRes.data) setCourses(coursesRes.data)
-      if (registrationsRes.data) setRegistrations(registrationsRes.data)
-      if (franchiseesRes.data) setFranchisees(franchiseesRes.data)
-      if (discountRequestsRes.data) setDiscountRequests(discountRequestsRes.data)
-      if (activitiesRes.data) setFranchiseActivities(activitiesRes.data)
-      if (staffRes.data) setStaffProfiles(staffRes.data)
+      const [
+        testimonialsData,
+        blogPostsData,
+        galleryData,
+        portfolioData,
+        coursesData,
+        registrationsData,
+        staffData,
+      ] = await Promise.all([
+        testimonialsRes.json(),
+        blogPostsRes.json(),
+        galleryRes.json(),
+        portfolioRes.json(),
+        coursesRes.json(),
+        registrationsRes.json(),
+        staffRes.json(),
+      ])
 
-      // Calculate stats
-      const pendingTestimonials = testimonialsRes.data?.filter((t) => t.status === "pending").length || 0
-      const publishedBlogPosts = blogPostsRes.data?.filter((b) => b.status === "published").length || 0
-      const pendingRegistrations = registrationsRes.data?.filter((r) => r.status === "pending").length || 0
-      const pendingFranchisees = franchiseesRes.data?.filter((f) => f.status === "pending").length || 0
-      const activeFranchisees = franchiseesRes.data?.filter((f) => f.status === "approved").length || 0
-      const pendingDiscountRequests = discountRequestsRes.data?.filter((d) => d.status === "pending").length || 0
-      const totalRevenue = franchiseesRes.data?.reduce((sum, f) => sum + (f.monthly_revenue || 0), 0) || 0
-      const pendingStaff = staffRes.data?.filter((s) => !s.approved).length || 0
-      const approvedStaff = staffRes.data?.filter((s) => s.approved).length || 0
+      setTestimonials(testimonialsData)
+      setBlogPosts(blogPostsData)
+      setGalleryImages(galleryData)
+      setPortfolioItems(portfolioData)
+      setCourses(coursesData)
+      setRegistrations(registrationsData)
+      setStaffProfiles(staffData)
 
+
+      console.log("Fetched data:", {
+        testimonialsData,
+        blogPostsData,
+        galleryData,
+        staffData,
+      })
       // Calculate stats
+      const pendingTestimonials = testimonialsData?.filter((t: any) => t.status === "pending").length || 0
+      const publishedBlogPosts = blogPostsData?.filter((b: any) => b.status === "published").length || 0
+      const pendingRegistrations = registrationsData?.filter((r: any) => r.status === "pending").length || 0
+      const pendingStaff = staffData?.filter((s: any) => !s.approved).length || 0
+      const approvedStaff = staffData?.filter((s: any) => s.approved).length || 0
+
       setStats({
         totalTestimonials: testimonialsData?.length || 0,
-        pendingTestimonials: testimonialsData?.filter((t) => t.status === "pending").length || 0,
+        pendingTestimonials,
         totalBlogPosts: blogPostsData?.length || 0,
-        publishedBlogPosts: blogPostsData?.filter((p) => p.status === "published").length || 0,
+        publishedBlogPosts,
         totalGalleryImages: galleryData?.length || 0,
         totalPortfolioItems: portfolioData?.length || 0,
         totalCourses: coursesData?.length || 0,
-        totalRegistrations: registrationsData?.length || 0, // Added registration stats
-        pendingRegistrations: registrationsData?.filter((r) => r.status === "pending").length || 0,
-        totalFranchisees: franchiseesRes.data?.length || 0,
-        pendingFranchisees,
-        activeFranchisees,
-        pendingDiscountRequests,
-        totalRevenue,
-        totalStaff: staffRes.data?.length || 0,
+        totalRegistrations: registrationsData?.length || 0,
+        pendingRegistrations,
+        totalStaff: staffData?.length || 0,
         pendingStaff,
         approvedStaff,
       })
@@ -274,51 +146,6 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
     }
   }
 
-  const handleFranchiseeAction = async (franchiseeId: string, action: "approve" | "reject" | "suspend") => {
-    try {
-      const status = action === "approve" ? "active" : action === "reject" ? "rejected" : "suspended"
-      const updateData: any = { status }
-
-      if (action === "approve") {
-        updateData.verified_at = new Date().toISOString()
-      }
-
-      const { error } = await supabase.from("franchisee_profiles").update(updateData).eq("id", franchiseeId)
-
-      if (error) throw error
-
-      // Just log the activity
-      await supabase.from("franchise_activity_log").insert({
-        franchisee_id: franchiseeId,
-        activity_type: "status_change",
-        description: `Franchisee ${action}d by admin`,
-        admin_id: user.id,
-      })
-
-      fetchData()
-    } catch (error) {
-      console.error(`Error ${action}ing franchisee:`, error)
-    }
-  }
-
-  const handleDiscountRequest = async (requestId: string, action: "approve" | "reject") => {
-    try {
-      const { error } = await supabase
-        .from("discount_requests")
-        .update({
-          status: action === "approve" ? "approved" : "rejected",
-          reviewed_by: user.id,
-          reviewed_at: new Date().toISOString(),
-        })
-        .eq("id", requestId)
-
-      if (error) throw error
-      fetchData()
-    } catch (error) {
-      console.error(`Error ${action}ing discount request:`, error)
-    }
-  }
-
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.push("/admin/login")
@@ -326,9 +153,15 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
   const updateTestimonialStatus = async (id: string, status: "approved" | "rejected") => {
     try {
-      const { error } = await supabase.from("testimonials").update({ status }).eq("id", id)
+      const response = await fetch("/api/admin/testimonials", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, status }),
+      })
 
-      if (error) throw error
+      if (!response.ok) throw new Error("Failed to update testimonial")
 
       setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, status } : t)))
     } catch (error) {
@@ -343,9 +176,15 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
         updateData.published_at = new Date().toISOString()
       }
 
-      const { error } = await supabase.from("blog_posts").update(updateData).eq("id", id)
+      const response = await fetch(`/api/admin/blog-posts/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updateData),
+      })
 
-      if (error) throw error
+      if (!response.ok) throw new Error("Failed to update blog post")
 
       setBlogPosts((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status, published_at: updateData.published_at || p.published_at } : p)),
@@ -357,8 +196,35 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
   const deleteItem = async (type: string, id: string) => {
     try {
-      const { error } = await supabase.from(type).delete().eq("id", id)
-      if (error) throw error
+      let endpoint = ""
+      switch (type) {
+        case "testimonials":
+          endpoint = `/api/admin/testimonials?id=${id}`
+          break
+        case "blog_posts":
+          endpoint = `/api/admin/blog-posts/${id}`
+          break
+        case "gallery_images":
+          endpoint = `/api/admin/gallery/${id}`
+          break
+        case "portfolio_items":
+          endpoint = `/api/admin/projects/${id}`
+          break
+        case "courses":
+          endpoint = `/api/admin/courses/${id}`
+          break
+        case "registrations":
+          endpoint = `/api/admin/registrations?id=${id}`
+          break
+        default:
+          throw new Error(`Unknown type: ${type}`)
+      }
+
+      const response = await fetch(endpoint, {
+        method: "DELETE",
+      })
+
+      if (!response.ok) throw new Error(`Failed to delete ${type}`)
 
       // Update local state
       switch (type) {
@@ -392,8 +258,16 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const toggleTestimonialVisibility = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === "approved" ? "rejected" : "approved"
     try {
-      const { error } = await supabase.from("testimonials").update({ status: newStatus }).eq("id", id)
-      if (error) throw error
+      const response = await fetch("/api/admin/testimonials", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, status: newStatus }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update testimonial")
+
       setTestimonials((prev) => prev.map((t) => (t.id === id ? { ...t, status: newStatus } : t)))
     } catch (error) {
       console.error("Error toggling testimonial visibility:", error)
@@ -402,9 +276,15 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
   const updateRegistrationStatus = async (id: string, status: "pending" | "contacted" | "enrolled" | "declined") => {
     try {
-      const { error } = await supabase.from("registrations").update({ status }).eq("id", id)
+      const response = await fetch("/api/admin/registrations", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ id, status }),
+      })
 
-      if (error) throw error
+      if (!response.ok) throw new Error("Failed to update registration")
 
       setRegistrations((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)))
       await fetchData() // Refresh stats
@@ -416,15 +296,22 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
   const handleStaffAction = async (staffId: string, action: "approve" | "reject") => {
     try {
       if (action === "approve") {
-        const { error } = await supabase.from("staff_profiles").update({ approved: true }).eq("id", staffId)
+        const response = await fetch("/api/admin/staff", {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: staffId, approved: true }),
+        })
 
-        if (error) throw error
+        if (!response.ok) throw new Error("Failed to approve staff")
       } else {
-        // For reject, we delete the staff profile and the auth account
-        const staff = staffProfiles.find((s) => s.id === staffId)
-        if (staff) {
-          await supabase.from("staff_profiles").delete().eq("id", staffId)
-        }
+        // For reject, we delete the staff profile
+        const response = await fetch(`/api/admin/staff?id=${staffId}`, {
+          method: "DELETE",
+        })
+
+        if (!response.ok) throw new Error("Failed to reject staff")
       }
 
       fetchData()
@@ -446,1127 +333,67 @@ export default function AdminDashboard({ user }: AdminDashboardProps) {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card">
-        <div className="flex h-16 items-center justify-between px-6">
-          <div className="flex items-center space-x-4">
-            <h1 className="text-xl font-bold font-montserrat">Thynkcity Admin</h1>
-            <Badge variant="secondary">Dashboard</Badge>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-sm text-muted-foreground">Welcome, Admin</span>
-            <Button variant="outline" size="sm" onClick={handleSignOut} className="hover-lift bg-transparent">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </header>
+      <AdminHeader onSignOut={handleSignOut} />
 
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 border-r border-border bg-card min-h-[calc(100vh-4rem)]">
-          <nav className="p-4 space-y-2">
-            <Button
-              variant={activeTab === "overview" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("overview")}
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Overview
-            </Button>
+      <div className="flex flex-col lg:flex-row">
+        <AdminSidebar activeTab={activeTab} setActiveTab={setActiveTab} stats={stats} />
 
-            <Button
-              variant={activeTab === "franchisees" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("franchisees")}
-            >
-              <Building2 className="h-4 w-4 mr-2" />
-              Franchisees
-              {stats.pendingFranchisees > 0 && (
-                <Badge variant="destructive" className="ml-auto">
-                  {stats.pendingFranchisees}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              variant={activeTab === "discount-requests" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("discount-requests")}
-            >
-              <DollarSign className="h-4 w-4 mr-2" />
-              Discount Requests
-              {stats.pendingDiscountRequests > 0 && (
-                <Badge variant="destructive" className="ml-auto">
-                  {stats.pendingDiscountRequests}
-                </Badge>
-              )}
-            </Button>
-            <Button
-              variant={activeTab === "franchise-activities" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("franchise-activities")}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Franchise Activities
-            </Button>
-
-            <Button
-              variant={activeTab === "testimonials" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("testimonials")}
-            >
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Testimonials
-              {stats.pendingTestimonials > 0 && (
-                <Badge variant="destructive" className="ml-auto">
-                  {stats.pendingTestimonials}
-                </Badge>
-              )}
-            </Button>
-
-            {/* ... existing navigation items ... */}
-            <Button
-              variant={activeTab === "blog" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("blog")}
-            >
-              <BookOpen className="h-4 w-4 mr-2" />
-              Blog Posts
-            </Button>
-            <Button
-              variant={activeTab === "gallery" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("gallery")}
-            >
-              <ImageIcon className="h-4 w-4 mr-2" />
-              Gallery
-            </Button>
-            <Button
-              variant={activeTab === "portfolio" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("portfolio")}
-            >
-              <Briefcase className="h-4 w-4 mr-2" />
-              Portfolio
-            </Button>
-            <Button
-              variant={activeTab === "courses" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("courses")}
-            >
-              <GraduationCap className="h-4 w-4 mr-2" />
-              Courses
-            </Button>
-            <Button
-              variant={activeTab === "registrations" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("registrations")}
-            >
-              <Users className="h-4 w-4 mr-2" />
-              Registrations
-              {stats.pendingRegistrations > 0 && (
-                <Badge variant="destructive" className="ml-auto">
-                  {stats.pendingRegistrations}
-                </Badge>
-              )}
-            </Button>
-
-            {/* Staff Management Tab */}
-            <Button
-              variant={activeTab === "staff" ? "default" : "ghost"}
-              className="w-full justify-start"
-              onClick={() => setActiveTab("staff")}
-            >
-              <UserCheck className="h-4 w-4 mr-2" />
-              Staff Management
-              {stats.pendingStaff > 0 && (
-                <Badge variant="destructive" className="ml-auto">
-                  {stats.pendingStaff}
-                </Badge>
-              )}
-            </Button>
-          </nav>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          {activeTab === "overview" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold font-montserrat mb-2">Dashboard Overview</h2>
-                <p className="text-muted-foreground">Manage your Thynkcity content and monitor activity</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Franchisees</CardTitle>
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalFranchisees}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {stats.activeFranchisees} active, {stats.pendingFranchisees} pending
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">₦{stats.totalRevenue.toLocaleString()}</div>
-                    <p className="text-xs text-muted-foreground">From all franchisees</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Discount Requests</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.pendingDiscountRequests}</div>
-                    <p className="text-xs text-muted-foreground">Pending approval</p>
-                  </CardContent>
-                </Card>
-
-                {/* ... existing overview cards ... */}
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Testimonials</CardTitle>
-                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalTestimonials}</div>
-                    <p className="text-xs text-muted-foreground">{stats.pendingTestimonials} pending approval</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Blog Posts</CardTitle>
-                    <BookOpen className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalBlogPosts}</div>
-                    <p className="text-xs text-muted-foreground">{stats.publishedBlogPosts} published</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Registrations</CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalRegistrations}</div>
-                    <p className="text-xs text-muted-foreground">{stats.pendingRegistrations} pending review</p>
-                  </CardContent>
-                </Card>
-
-                <Card className="hover-lift smooth-transition">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Courses</CardTitle>
-                    <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalCourses}</div>
-                    <p className="text-xs text-muted-foreground">Available courses</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "franchisees" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat mb-2">Franchisee Management</h2>
-                  <p className="text-muted-foreground">Manage franchise applications and active franchisees</p>
-                </div>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>All Franchisees</CardTitle>
-                  <CardDescription>Review and manage franchise applications and active franchisees</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Full Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Territory</TableHead>
-                        <TableHead>Country</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Applied</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {franchisees.map((franchisee) => (
-                        <TableRow key={franchisee.id}>
-                          <TableCell className="font-medium">{franchisee.full_name}</TableCell>
-                          <TableCell>{franchisee.email}</TableCell>
-                          <TableCell>{franchisee.territory}</TableCell>
-                          <TableCell className="capitalize">{franchisee.country}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                franchisee.status === "active" || franchisee.status === "approved"
-                                  ? "default"
-                                  : franchisee.status === "pending"
-                                    ? "secondary"
-                                    : franchisee.status === "rejected"
-                                      ? "destructive"
-                                      : "outline"
-                              }
-                            >
-                              {franchisee.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(franchisee.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              {franchisee.status === "pending" && (
-                                <>
-                                  <Button size="sm" onClick={() => handleFranchiseeAction(franchisee.id, "approve")}>
-                                    <Check className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => handleFranchiseeAction(franchisee.id, "reject")}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                              {(franchisee.status === "active" || franchisee.status === "approved") && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleFranchiseeAction(franchisee.id, "suspend")}
-                                >
-                                  Suspend
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  alert(
-                                    `Franchisee Details:\n\nName: ${franchisee.full_name}\nEmail: ${franchisee.email}\nPhone: ${franchisee.phone_number}\nTerritory: ${franchisee.territory}\nCountry: ${franchisee.country}\nState/City: ${franchisee.state_city}\n\nStatement:\n${franchisee.statement}`,
-                                  )
-                                }}
-                              >
-                                View Details
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === "discount-requests" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold font-montserrat mb-2">Discount Requests</h2>
-                <p className="text-muted-foreground">Review and approve discount requests from franchisees</p>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pending Discount Requests</CardTitle>
-                  <CardDescription>Review discount requests that need approval</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Franchisee</TableHead>
-                        <TableHead>School</TableHead>
-                        <TableHead>Original Amount</TableHead>
-                        <TableHead>Requested Discount</TableHead>
-                        <TableHead>Final Amount</TableHead>
-                        <TableHead>Reason</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {discountRequests.map((request) => (
-                        <TableRow key={request.id}>
-                          <TableCell className="font-medium">{request.franchisee_name}</TableCell>
-                          <TableCell>{request.school_name}</TableCell>
-                          <TableCell>₦{request.original_amount.toLocaleString()}</TableCell>
-                          <TableCell>{request.requested_discount}%</TableCell>
-                          <TableCell>
-                            ₦{(request.original_amount * (1 - request.requested_discount / 100)).toLocaleString()}
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">{request.reason}</TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                request.status === "approved"
-                                  ? "default"
-                                  : request.status === "pending"
-                                    ? "secondary"
-                                    : "destructive"
-                              }
-                            >
-                              {request.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {request.status === "pending" && (
-                              <div className="flex gap-2">
-                                <Button size="sm" onClick={() => handleDiscountRequest(request.id, "approve")}>
-                                  <Check className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleDiscountRequest(request.id, "reject")}
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {activeTab === "franchise-activities" && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold font-montserrat mb-2">Franchise Activities</h2>
-                <p className="text-muted-foreground">Monitor all franchise activities and system events</p>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Recent Activities</CardTitle>
-                  <CardDescription>Latest activities from all franchisees</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Franchisee</TableHead>
-                        <TableHead>Activity Type</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {franchiseActivities.map((activity) => (
-                        <TableRow key={activity.id}>
-                          <TableCell className="font-medium">{activity.franchisee_name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{activity.activity_type.replace("_", " ")}</Badge>
-                          </TableCell>
-                          <TableCell>{activity.description}</TableCell>
-                          <TableCell>{new Date(activity.created_at).toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
+        <main className="flex-1 p-4 lg:p-6">
+          {activeTab === "overview" && <OverviewTab stats={stats} />}
           {activeTab === "testimonials" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat">Testimonials</h2>
-                  <p className="text-muted-foreground">Review and manage user testimonials</p>
-                </div>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>All Testimonials</CardTitle>
-                  <CardDescription>Review testimonials and approve them for public display</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {testimonials.map((testimonial) => (
-                        <TableRow key={testimonial.id}>
-                          <TableCell className="font-medium">{testimonial.name}</TableCell>
-                          <TableCell>{testimonial.role}</TableCell>
-                          <TableCell>
-                            <div className="flex">
-                              {[...Array(testimonial.rating)].map((_, i) => (
-                                <span key={i} className="text-primary">
-                                  ★
-                                </span>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                testimonial.status === "approved"
-                                  ? "default"
-                                  : testimonial.status === "pending"
-                                    ? "secondary"
-                                    : "destructive"
-                              }
-                            >
-                              {testimonial.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(testimonial.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              {testimonial.status === "pending" && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => updateTestimonialStatus(testimonial.id, "approved")}
-                                    className="hover-lift"
-                                  >
-                                    <Check className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => updateTestimonialStatus(testimonial.id, "rejected")}
-                                    className="hover-lift"
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </>
-                              )}
-                              {(testimonial.status === "approved" || testimonial.status === "rejected") && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => toggleTestimonialVisibility(testimonial.id, testimonial.status)}
-                                  className="hover-lift bg-transparent"
-                                >
-                                  {testimonial.status === "approved" ? "Reject" : "Approve"}
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setDeleteConfirm({ type: "testimonials", id: testimonial.id })}
-                                className="hover-lift"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+            <TestimonialsTab
+              testimonials={testimonials}
+              updateTestimonialStatus={updateTestimonialStatus}
+              toggleTestimonialVisibility={toggleTestimonialVisibility}
+              setDeleteConfirm={setDeleteConfirm}
+            />
           )}
-
           {activeTab === "blog" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat">Blog Posts</h2>
-                  <p className="text-muted-foreground">Manage your blog content</p>
-                </div>
-                <Button
-                  className="hover-lift btn-animate"
-                  onClick={() => {
-                    setShowAddModal(true)
-                    setEditingItem({ type: "blog" })
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Post
-                </Button>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>All Blog Posts</CardTitle>
-                  <CardDescription>Create, edit, and publish blog articles</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Title</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Published</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {blogPosts.map((post) => (
-                        <TableRow key={post.id}>
-                          <TableCell className="font-medium">{post.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{post.category}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                post.status === "published"
-                                  ? "default"
-                                  : post.status === "draft"
-                                    ? "secondary"
-                                    : "destructive"
-                              }
-                            >
-                              {post.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {post.published_at ? new Date(post.published_at).toLocaleDateString() : "Not published"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="hover-lift bg-transparent"
-                                onClick={() => {
-                                  setEditingItem({ ...post, type: "blog" })
-                                  setShowAddModal(true)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              {post.status === "draft" && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateBlogPostStatus(post.id, "published")}
-                                  className="hover-lift"
-                                >
-                                  Publish
-                                </Button>
-                              )}
-                              {post.status === "published" && (
-                                <Button
-                                  size="sm"
-                                  variant="secondary"
-                                  onClick={() => updateBlogPostStatus(post.id, "archived")}
-                                  className="hover-lift"
-                                >
-                                  Archive
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setDeleteConfirm({ type: "blog_posts", id: post.id })}
-                                className="hover-lift"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+            <BlogTab
+              blogPosts={blogPosts}
+              updateBlogPostStatus={updateBlogPostStatus}
+              setShowAddModal={setShowAddModal}
+              setEditingItem={setEditingItem}
+              setDeleteConfirm={setDeleteConfirm}
+            />
           )}
-
           {activeTab === "gallery" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat">Gallery Management</h2>
-                  <p className="text-muted-foreground">Organize and manage gallery images</p>
-                </div>
-                <Button
-                  className="hover-lift btn-animate"
-                  onClick={() => {
-                    setShowAddModal(true)
-                    setEditingItem({ type: "gallery" })
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Upload Images
-                </Button>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Gallery Images</CardTitle>
-                  <CardDescription>Manage images displayed in the gallery section</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {galleryImages.map((image) => (
-                      <div key={image.id} className="border rounded-lg p-4 space-y-3">
-                        <img
-                          src={image.image_url || "/placeholder.svg"}
-                          alt={image.title}
-                          className="w-full h-48 object-cover rounded"
-                        />
-                        <div>
-                          <h3 className="font-medium">{image.title}</h3>
-                          <p className="text-sm text-muted-foreground">{image.description}</p>
-                          <Badge variant="outline" className="mt-1">
-                            {image.category}
-                          </Badge>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setEditingItem({ ...image, type: "gallery" })
-                              setShowAddModal(true)
-                            }}
-                            className="hover-lift bg-transparent"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => setDeleteConfirm({ type: "gallery_images", id: image.id })}
-                            className="hover-lift"
-                          >
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <GalleryTab
+              galleryImages={galleryImages}
+              setShowAddModal={setShowAddModal}
+              setEditingItem={setEditingItem}
+              setDeleteConfirm={setDeleteConfirm}
+            />
           )}
-
           {activeTab === "portfolio" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat">Portfolio Management</h2>
-                  <p className="text-muted-foreground">Manage portfolio projects and case studies</p>
-                </div>
-                <Button
-                  className="hover-lift btn-animate"
-                  onClick={() => {
-                    setShowAddModal(true)
-                    setEditingItem({ type: "portfolio" })
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Project
-                </Button>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Portfolio Projects</CardTitle>
-                  <CardDescription>Showcase your successful projects and case studies</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Project</TableHead>
-                        <TableHead>Client</TableHead>
-                        <TableHead>Industry</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {portfolioItems.map((project) => (
-                        <TableRow key={project.id}>
-                          <TableCell className="font-medium">{project.title}</TableCell>
-                          <TableCell>{project.client_name}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{project.industry}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={project.status === "active" ? "default" : "secondary"}>
-                              {project.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(project.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingItem({ ...project, type: "portfolio" })
-                                  setShowAddModal(true)
-                                }}
-                                className="hover-lift bg-transparent"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setDeleteConfirm({ type: "portfolio_items", id: project.id })}
-                                className="hover-lift"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+            <PortfolioTab
+              portfolioItems={portfolioItems}
+              setShowAddModal={setShowAddModal}
+              setEditingItem={setEditingItem}
+              setDeleteConfirm={setDeleteConfirm}
+            />
           )}
-
           {activeTab === "courses" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat">Course Management</h2>
-                  <p className="text-muted-foreground">Create and manage training courses</p>
-                </div>
-                <Button
-                  className="hover-lift btn-animate"
-                  onClick={() => {
-                    setShowAddModal(true)
-                    setEditingItem({ type: "course" })
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Course
-                </Button>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>All Courses</CardTitle>
-                  <CardDescription>Manage your educational course offerings</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Course</TableHead>
-                        <TableHead>Target</TableHead>
-                        <TableHead>Duration</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {courses.map((course) => (
-                        <TableRow key={course.id}>
-                          <TableCell className="font-medium">{course.title}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{course.target_audience}</Badge>
-                          </TableCell>
-                          <TableCell>{course.duration_weeks} weeks</TableCell>
-                          <TableCell>₦{course.price?.toLocaleString()}</TableCell>
-                          <TableCell>
-                            <Badge variant={course.status === "active" ? "default" : "secondary"}>
-                              {course.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(course.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingItem({ ...course, type: "course" })
-                                  setShowAddModal(true)
-                                }}
-                                className="hover-lift bg-transparent"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setDeleteConfirm({ type: "courses", id: course.id })}
-                                className="hover-lift"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+            <CoursesTab
+              courses={courses}
+              setShowAddModal={setShowAddModal}
+              setEditingItem={setEditingItem}
+              setDeleteConfirm={setDeleteConfirm}
+            />
           )}
-
           {activeTab === "registrations" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat">Student Registrations</h2>
-                  <p className="text-muted-foreground">Manage course registration inquiries and enrollments</p>
-                </div>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>All Registrations</CardTitle>
-                  <CardDescription>Review and manage student registration requests</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Contact</TableHead>
-                        <TableHead>Course Interest</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {registrations.map((registration) => (
-                        <TableRow key={registration.id}>
-                          <TableCell className="font-medium">
-                            <div>
-                              <div>{registration.name}</div>
-                              {registration.type === "parent" && registration.children && (
-                                <div className="text-sm text-muted-foreground">
-                                  Children: {registration.children.map((child) => child.name).join(", ")}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{registration.type === "individual" ? "Student" : "Parent"}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              <div>{registration.email}</div>
-                              <div className="text-muted-foreground">{registration.phone}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {registration.type === "individual" ? (
-                                <Badge variant="secondary">{registration.course_interest}</Badge>
-                              ) : (
-                                <div className="space-y-1">
-                                  {registration.children?.map((child, index) => (
-                                    <Badge key={index} variant="secondary" className="mr-1">
-                                      {child.course_interest}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                registration.status === "enrolled"
-                                  ? "default"
-                                  : registration.status === "contacted"
-                                    ? "secondary"
-                                    : registration.status === "pending"
-                                      ? "outline"
-                                      : "destructive"
-                              }
-                            >
-                              {registration.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(registration.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            <div className="flex space-x-2">
-                              {registration.status === "pending" && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => updateRegistrationStatus(registration.id, "contacted")}
-                                  className="hover-lift"
-                                >
-                                  Contact
-                                </Button>
-                              )}
-                              {registration.status === "contacted" && (
-                                <>
-                                  <Button
-                                    size="sm"
-                                    onClick={() => updateRegistrationStatus(registration.id, "enrolled")}
-                                    className="hover-lift"
-                                  >
-                                    Enroll
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => updateRegistrationStatus(registration.id, "declined")}
-                                    className="hover-lift bg-transparent"
-                                  >
-                                    Decline
-                                  </Button>
-                                </>
-                              )}
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() => setDeleteConfirm({ type: "registrations", id: registration.id })}
-                                className="hover-lift"
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+            <RegistrationsTab
+              registrations={registrations}
+              updateRegistrationStatus={updateRegistrationStatus}
+              setDeleteConfirm={setDeleteConfirm}
+            />
           )}
-
-          {/* Staff Management Tab Content */}
           {activeTab === "staff" && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h2 className="text-2xl font-bold font-montserrat">Staff Management</h2>
-                  <p className="text-muted-foreground">Review and approve staff applications</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Total Staff</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{stats.totalStaff}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Pending Approval</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-orange-600">{stats.pendingStaff}</div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-sm">Approved Staff</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{stats.approvedStaff}</div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Staff Applications</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Phone</TableHead>
-                        <TableHead>Specialization</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Applied</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {staffProfiles.map((staff) => (
-                        <TableRow key={staff.id}>
-                          <TableCell className="font-medium">{staff.full_name}</TableCell>
-                          <TableCell>{staff.email}</TableCell>
-                          <TableCell>{staff.phone_number}</TableCell>
-                          <TableCell>{staff.specialization}</TableCell>
-                          <TableCell>
-                            <Badge variant={staff.approved ? "default" : "secondary"}>
-                              {staff.approved ? "Approved" : "Pending"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{new Date(staff.created_at).toLocaleDateString()}</TableCell>
-                          <TableCell>
-                            {!staff.approved && (
-                              <div className="flex gap-2">
-                                <Button
-                                  size="sm"
-                                  variant="default"
-                                  onClick={() => handleStaffAction(staff.id, "approve")}
-                                >
-                                  <Check className="h-4 w-4 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="destructive"
-                                  onClick={() => handleStaffAction(staff.id, "reject")}
-                                >
-                                  <X className="h-4 w-4 mr-1" />
-                                  Reject
-                                </Button>
-                              </div>
-                            )}
-                            {staff.approved && <span className="text-sm text-muted-foreground">Active</span>}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
+            <StaffTab
+              staffProfiles={staffProfiles}
+              stats={stats}
+              handleStaffAction={handleStaffAction}
+            />
           )}
         </main>
       </div>

@@ -71,6 +71,32 @@ export interface Course {
   created_at: string
 }
 
+export interface Registration {
+  id: string
+  type: 'individual' | 'parent'
+  name: string
+  email: string
+  phone: string
+  age?: number
+  course_interest: string
+  children?: any
+  status: 'pending' | 'contacted' | 'enrolled' | 'declined'
+  created_at: string
+  updated_at: string
+}
+
+export interface StaffProfile {
+  id: string
+  user_id: string
+  full_name: string
+  email: string
+  phone_number: string
+  specialization: string
+  bio?: string
+  approved: boolean
+  created_at: string
+}
+
 // Testimonials
 export async function getApprovedTestimonials(): Promise<Testimonial[]> {
   const supabase = await createClient()

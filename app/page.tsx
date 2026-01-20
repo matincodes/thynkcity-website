@@ -92,7 +92,7 @@ export default function HomePage() {
                 </Button>
               </div>
 
-              <div className="flex items-center space-x-8 text-sm text-muted-foreground animate-fade-in animate-stagger-5">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 text-sm text-muted-foreground animate-fade-in animate-stagger-5">
                 <div className="flex items-center space-x-2">
                   <CheckCircle className="h-5 w-5 text-primary" />
                   <span>20,000+ Learners Empowered</span>

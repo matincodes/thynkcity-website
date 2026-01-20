@@ -269,18 +269,19 @@ export default function ScheduleManager({ staffId }: ScheduleManagerProps) {
             </form>
           )}
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Day</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead>Subject</TableHead>
-                <TableHead>Student/School</TableHead>
-                <TableHead>Meet Link</TableHead>
-                <TableHead>Reminder</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[80px]">Day</TableHead>
+                  <TableHead className="min-w-[120px]">Time</TableHead>
+                  <TableHead className="min-w-[150px]">Subject</TableHead>
+                  <TableHead className="min-w-[120px]">Student/School</TableHead>
+                  <TableHead className="min-w-[100px]">Meet Link</TableHead>
+                  <TableHead className="min-w-[100px]">Reminder</TableHead>
+                  <TableHead className="min-w-[80px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {schedules.length === 0 ? (
                 <TableRow>
@@ -331,6 +332,7 @@ export default function ScheduleManager({ staffId }: ScheduleManagerProps) {
               )}
             </TableBody>
           </Table>
+            </div>
         </CardContent>
       </Card>
     </div>
